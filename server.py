@@ -16,6 +16,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from memory.cache import CachedStore
 from memory.service import MemoryError_, MemoryService
 from memory.store import DriveStore, LocalFileStore
 from retrieval.retrievers import KeywordRetriever
@@ -39,10 +40,14 @@ Voice rules:
 
 
 def build_service() -> MemoryService:
+    # Reads come from memory. Drive writes go out in the background so no tool call
+    # waits on a network request; local file writes are fast and stay synchronous.
     if os.getenv("MEMORY_BACKEND", "local") == "drive":
-        store = DriveStore(os.environ["DRIVE_FOLDER_ID"], os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+        backing = DriveStore(os.environ["DRIVE_FOLDER_ID"], os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+        store = CachedStore(backing, write_behind=True)
     else:
-        store = LocalFileStore(os.getenv("LOCAL_MEMORY_PATH", HERE / "demo_data" / "memories.md"))
+        backing = LocalFileStore(os.getenv("LOCAL_MEMORY_PATH", HERE / "demo_data" / "memories.md"))
+        store = CachedStore(backing, write_behind=False)
     return MemoryService(store, KeywordRetriever())
 
 
@@ -138,4 +143,8 @@ def build_app(service: MemoryService | None = None):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(build_app(), host=os.getenv("HOST", "127.0.0.1"), port=int(os.getenv("PORT", "8000")))
+    service = build_service()
+    try:
+        uvicorn.run(build_app(service), host=os.getenv("HOST", "127.0.0.1"), port=int(os.getenv("PORT", "8000")))
+    finally:
+        service.store.close()  # flush write-behind changes before exiting

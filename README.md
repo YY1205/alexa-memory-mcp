@@ -69,6 +69,7 @@ See `.env.example`.
 server.py              MCP server, tool definitions, auth middleware
 memory/schema.py       record fields + Markdown (de)serialisation
 memory/store.py        local file and Google Drive backends
+memory/cache.py        in-memory cache, Drive write-behind, refresh + merge
 memory/service.py      memory rules (confirm, supersede, review)
 retrieval/retrievers.py  keyword retrieval
 demo_data/seed.py      fictional demo data

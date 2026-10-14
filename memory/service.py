@@ -28,7 +28,9 @@ class MemoryService:
         self.store = store
         self.retriever = retriever or KeywordRetriever()
         self._today = today or (lambda: date.today())
-        self._lock = threading.Lock()  # one writer at a time (single-user server)
+        # One writer at a time (single-user server). A CachedStore exposes its lock so
+        # a background reload can't land between our load() and save().
+        self._lock = getattr(store, "lock", None) or threading.Lock()
 
     # ---------- helpers ----------
     def _next_id(self, records: list[MemoryRecord]) -> str:
