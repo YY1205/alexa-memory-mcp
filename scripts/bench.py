@@ -7,7 +7,7 @@ Starts nothing itself: point it at a running server.
 Each iteration calls all six tools with the official MCP Python client:
 recall, list_due_reviews, propose_memory + confirm_memory (creates a benchmark
 fact), supersede_memory + confirm_memory (discarded), resolve_review (retires the
-benchmark fact). It WRITES to the memory file, leaving one historical
+benchmark fact), and reads the memory file resource (memory://memories.md). It WRITES to the memory file, leaving one historical
 "Benchmark fact" record per iteration: run it against demo data only.
 """
 from __future__ import annotations
@@ -24,6 +24,8 @@ from mcp.client.streamable_http import create_mcp_http_client, streamable_http_c
 
 TOOLS = ("recall", "list_due_reviews", "propose_memory", "confirm_memory",
          "supersede_memory", "resolve_review")
+MEMORY_URI = "memory://memories.md"
+RESOURCE_KEY = "read memories.md"  # timings key for resources/read
 
 
 def percentile(values: list[float], p: float) -> float:
@@ -33,7 +35,7 @@ def percentile(values: list[float], p: float) -> float:
 
 async def run_bench(url: str, token: str | None = None, n: int = 50) -> dict[str, list[float]]:
     """Return per-tool round-trip times in milliseconds."""
-    timings: dict[str, list[float]] = {t: [] for t in TOOLS}
+    timings: dict[str, list[float]] = {t: [] for t in (*TOOLS, RESOURCE_KEY)}
     headers = {"Authorization": f"Bearer {token}"} if token else None
     http = create_mcp_http_client(headers=headers)
     async with Client(streamable_http_client(url, http_client=http)) as c:
@@ -58,11 +60,16 @@ async def run_bench(url: str, token: str | None = None, n: int = 50) -> dict[str
                                                 "new_fact": f"Benchmark fact number {i}, corrected."})
             await call("confirm_memory", {"pending_id": s["pending_id"], "confirmed": False})
             await call("resolve_review", {"memory_id": p["pending_id"], "still_true": False})
+            t0 = time.perf_counter()
+            res = await c.read_resource(MEMORY_URI, cache_mode="bypass")
+            timings[RESOURCE_KEY].append((time.perf_counter() - t0) * 1000)
+            if p["pending_id"] not in res.contents[0].text:
+                raise RuntimeError("memory resource does not show the benchmark fact")
     return timings
 
 
 def report(timings: dict[str, list[float]], budget_ms: float) -> tuple[str, bool]:
-    lines = [f"{'tool':<18}{'calls':>6}{'p50 ms':>10}{'p95 ms':>10}{'max ms':>10}  p95<{budget_ms:g}ms"]
+    lines = [f"{'tool / resource':<18}{'calls':>6}{'p50 ms':>10}{'p95 ms':>10}{'max ms':>10}  p95<{budget_ms:g}ms"]
     ok = True
     for tool, values in timings.items():
         p50, p95, mx = percentile(values, 0.5), percentile(values, 0.95), max(values)

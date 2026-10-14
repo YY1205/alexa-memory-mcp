@@ -99,7 +99,8 @@ def http_server(tmp_path):
     mem = tmp_path / "memories.md"
     mem.write_text(to_markdown(RECORDS))
     port = _free_port()
-    env = {**os.environ, "PORT": str(port), "LOCAL_MEMORY_PATH": str(mem), "MCP_BEARER_TOKEN": "test-token"}
+    env = {**os.environ, "PORT": str(port), "LOCAL_MEMORY_PATH": str(mem), "MCP_BEARER_TOKEN": "test-token",
+           "DEMO_ADMIN": "1"}
     proc = subprocess.Popen([sys.executable, "server.py"], cwd=ROOT, env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     url = f"http://127.0.0.1:{port}"
@@ -136,7 +137,44 @@ def test_full_voice_flow_over_http(http_server):
             pending = json.loads(p.content[0].text)
             await c.call_tool("confirm_memory", {"pending_id": pending["pending_id"], "confirmed": True})
             r = await c.call_tool("recall", {"query": "where did I park at work"})
+            res = await c.read_resource("memory://memories.md", cache_mode="bypass")
+            return json.loads(r.content[0].text), res.contents[0]
+
+    out, memory_file = anyio.run(run)
+    assert "level 3" in out["memories"][0]["fact"]
+    assert memory_file.mime_type == "text/markdown"
+    assert "parks on level 3 at work" in memory_file.text  # resource reflects the write
+
+
+def test_admin_reset_requires_token_and_restores_demo_data(http_server):
+    assert httpx.post(f"{http_server}/admin/reset").status_code == 401
+    auth = {"Authorization": "Bearer test-token"}
+    import anyio
+    from mcp import Client
+    from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
+
+    async def call(tool, args):
+        http = create_mcp_http_client(headers=auth)
+        async with Client(streamable_http_client(f"{http_server}/mcp", http_client=http)) as c:
+            r = await c.call_tool(tool, args)
             return json.loads(r.content[0].text)
 
-    out = anyio.run(run)
-    assert "level 3" in out["memories"][0]["fact"]
+    anyio.run(call, "resolve_review", {"memory_id": "MEM-0007", "still_true": False})
+    assert anyio.run(call, "list_due_reviews", {})["count"] == 0
+    r = httpx.post(f"{http_server}/admin/reset", headers=auth)
+    assert r.status_code == 200 and r.json()["records"] == len(RECORDS)
+    assert anyio.run(call, "list_due_reviews", {})["count"] == 1
+
+
+def test_admin_reset_is_off_by_default(monkeypatch, tmp_path):
+    from starlette.testclient import TestClient
+
+    import server
+
+    monkeypatch.delenv("DEMO_ADMIN", raising=False)
+    monkeypatch.delenv("MCP_BEARER_TOKEN", raising=False)
+    path = tmp_path / "memories.md"
+    path.write_text(to_markdown(RECORDS))
+    app = server.build_app(MemoryService(LocalFileStore(path)))
+    with TestClient(app) as client:
+        assert client.post("/admin/reset").status_code == 404

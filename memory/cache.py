@@ -110,6 +110,19 @@ class CachedStore:
         if self.dirty:
             self._sync()
 
+    def reset(self, records: list[MemoryRecord]) -> None:
+        """Replace everything, in memory and in the backing store (demo reset).
+
+        Blocking and without merging: unsaved writes and hand edits are discarded.
+        """
+        with self._io_lock:
+            self.backing.save(records)
+            with self.lock:
+                self._records = _copy(records)
+                self._base = _copy(records)
+                self._generation += 1
+                self._dirty = False
+
     def close(self) -> None:
         self._stop.set()
         self._wake.set()

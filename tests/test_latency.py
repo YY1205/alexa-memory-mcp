@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import server  # noqa: E402
-from bench import TOOLS, percentile, report, run_bench  # noqa: E402
+from bench import RESOURCE_KEY, TOOLS, percentile, report, run_bench  # noqa: E402
 from demo_data.seed import RECORDS  # noqa: E402
 from memory.cache import CachedStore  # noqa: E402
 from memory.service import MemoryService  # noqa: E402
@@ -58,7 +58,7 @@ def test_every_tool_p95_under_budget_with_slow_persistence(slow_drive_server):
     timings = anyio.run(run_bench, url, "bench-token", 30)
     table, ok = report(timings, BUDGET_MS)
     print("\n" + table)
-    assert set(timings) == set(TOOLS)
+    assert set(timings) == {*TOOLS, RESOURCE_KEY}  # six tools + the memory file resource
     for tool, values in timings.items():
         assert percentile(values, 0.95) < BUDGET_MS, f"{tool} too slow:\n{table}"
     assert ok

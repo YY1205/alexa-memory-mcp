@@ -179,6 +179,16 @@ def test_local_file_write_keeps_recent_hand_edit(tmp_path, stores):
     assert "learning Italian" in text and "long answers" in text
 
 
+def test_reset_replaces_everything_without_merging(stores):
+    backing = FakeStore(RECORDS)
+    store = stores(backing, write_behind=True, debounce=3600, refresh_interval=3600)
+    store.save(edit(store.load(), "MEM-0003", fact="Unsaved local edit."))
+    backing.records = edit(backing.records, "MEM-0004", fact="Hand edit.")
+    store.reset(RECORDS)
+    assert store.load() == RECORDS and backing.records == RECORDS
+    assert not store.dirty
+
+
 def test_three_way_merge_without_remote_changes_returns_local():
     local = edit(RECORDS, "MEM-0001", fact="x")
     merged, conflicts = three_way_merge(RECORDS, local, RECORDS)

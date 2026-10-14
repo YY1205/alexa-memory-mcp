@@ -23,6 +23,7 @@ from retrieval.retrievers import KeywordRetriever
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 HERE = Path(__file__).parent
+MEMORY_URI = "memory://memories.md"
 
 INSTRUCTIONS = """\
 This server is the user's own long-term memory. The user owns it; it is stored
@@ -103,6 +104,25 @@ def build_server(service: MemoryService) -> MCPServer:
         """Record the user's answer to "is this still true?". still_true=false retires
         the memory (kept as history). Optionally schedule the next check."""
         return safe(service.resolve_review, memory_id, still_true, review_in_days)
+
+    @mcp.resource(MEMORY_URI, name="memories.md", title="Your memory file",
+                  description="The user's canonical memory file (Markdown), as stored.",
+                  mime_type="text/markdown")
+    def memory_file() -> str:
+        return service.export_markdown()
+
+    if os.getenv("DEMO_ADMIN") == "1":
+        # Local demo helper: restore the fictional persona. Off by default; when the
+        # server has MCP_BEARER_TOKEN, this route requires it like /mcp does.
+        @mcp.custom_route("/admin/reset", methods=["POST"], include_in_schema=False)
+        async def reset_demo(request):
+            from demo_data.seed import RECORDS
+
+            if hasattr(service.store, "reset"):
+                service.store.reset(RECORDS)
+            else:
+                service.store.save(RECORDS)
+            return JSONResponse({"ok": True, "records": len(RECORDS)})
 
     return mcp
 

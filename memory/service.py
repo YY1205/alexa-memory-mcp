@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from retrieval.retrievers import KeywordRetriever, Retriever
 
-from .schema import CATEGORIES, MemoryRecord, now_iso
+from .schema import CATEGORIES, MemoryRecord, now_iso, to_markdown
 from .store import MemoryStore
 
 PENDING_TTL = timedelta(hours=24)
@@ -58,6 +58,10 @@ class MemoryService:
         return (self._today() + timedelta(days=review_in_days)).isoformat()
 
     # ---------- read ----------
+    def export_markdown(self) -> str:
+        """The canonical memory file, exactly as it is (or will be) written to storage."""
+        return to_markdown(self.store.load())
+
     def recall(self, query: str, category: str | None = None, limit: int = 5) -> dict:
         active = [r for r in self.store.load() if r.status == "active"]
         if category:
