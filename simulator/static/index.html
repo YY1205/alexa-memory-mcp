@@ -1,1 +1,87 @@
-<!doctype html><title>Simulated Alexa+</title>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulated Alexa+</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Simulated Alexa+</h1>
+      <p class="tagline">Portable Memory demo: a real MCP client talking to your own memory server</p>
+    </div>
+    <div class="chips">
+      <span class="chip" id="brain-chip" title="The model that plays Alexa">brain: …</span>
+      <span class="chip" id="server-chip" title="The MCP memory server">server: …</span>
+      <button type="button" class="btn" id="reset-btn">Reset demo</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 1. Device -->
+    <section class="device-wrap" aria-label="Simulated device">
+      <div class="device">
+        <div class="bezel">
+          <span class="camera" aria-hidden="true"></span>
+          <div class="screen">
+            <div class="screen-top">
+              <span id="clock" class="clock">--:--</span>
+              <span id="state-label" class="state-label">Ready</span>
+            </div>
+            <div id="conversation" class="conversation" aria-live="polite">
+              <div class="bubble system">Try: “When is my sister's birthday?”</div>
+            </div>
+            <div id="lightbar" class="lightbar" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="base" aria-hidden="true"></div>
+      </div>
+
+      <form id="ask-form" class="controls" autocomplete="off">
+        <button type="button" id="mic-btn" class="mic" aria-label="Talk (hold a conversation by voice)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
+        </button>
+        <input id="text-input" type="text" maxlength="500" placeholder="Speak, or type here and press Enter" aria-label="Your words">
+        <button type="submit" class="btn primary">Send</button>
+        <button type="button" id="mute-btn" class="btn icon" aria-pressed="false" title="Mute spoken replies">🔊</button>
+      </form>
+      <p id="hint" class="hint" role="status"></p>
+    </section>
+
+    <!-- 2. Under the hood -->
+    <section class="panel" aria-labelledby="hood-title">
+      <div class="panel-head">
+        <h2 id="hood-title">Under the hood</h2>
+        <span class="muted small">MCP tool calls · 500 ms Alexa+ budget</span>
+      </div>
+      <div id="trace" class="trace">
+        <p class="empty">Every MCP tool call made for your request shows up here with its arguments, result and round-trip time.</p>
+      </div>
+    </section>
+
+    <!-- 3. Memory file -->
+    <section class="panel" aria-labelledby="mem-title">
+      <div class="panel-head">
+        <h2 id="mem-title">Your memory file</h2>
+        <span id="mem-meta" class="muted small">memory://memories.md</span>
+        <div class="seg" role="tablist" aria-label="Memory view">
+          <button type="button" class="seg-btn active" data-view="cards" role="tab" aria-selected="true">Rendered</button>
+          <button type="button" class="seg-btn" data-view="raw" role="tab" aria-selected="false">Markdown</button>
+        </div>
+      </div>
+      <div class="legend small">
+        <span class="badge status-active">active</span>
+        <span class="badge status-pending">pending (awaiting your yes)</span>
+        <span class="badge status-historical">historical (kept as history)</span>
+        <span class="badge flash">just changed</span>
+      </div>
+      <div id="memory" class="memory"></div>
+      <pre id="memory-raw" class="memory-raw" hidden></pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
