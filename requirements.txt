@@ -1,0 +1,7 @@
+mcp>=2.3,<3          # Python MCP SDK; negotiates protocol 2025-11-25 over Streamable HTTP
+uvicorn>=0.30
+boto3>=1.35          # Amazon Bedrock (RETRIEVER=bedrock)
+google-api-python-client>=2.140   # Google Drive (MEMORY_BACKEND=drive)
+google-auth>=2.30
+pytest>=8
+httpx>=0.27
