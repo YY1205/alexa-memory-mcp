@@ -44,6 +44,7 @@ def test_recall_flags_overdue_review(service):
 
 def test_propose_does_not_save_until_confirmed(service):
     p = service.propose("The user's dentist appointment is on Friday at 3pm.", "active_context", 7)
+    assert p["confirmation_prompt"] == "Should I remember that the user's dentist appointment is on Friday at 3pm?"
     assert service.recall("dentist appointment")["found"] is False  # still pending
     out = service.confirm(p["pending_id"], True)
     assert out["saved"] and out["memory"]["confirmed_by_user"]

@@ -110,7 +110,8 @@ class MemoryService:
         if supersedes:
             prompt = f'Should I replace "{old.fact}" with "{fact}"?'
         else:
-            prompt = f'Should I remember that {fact[0].lower() + fact[1:]}?'
+            spoken = fact.rstrip(".!? ")
+            prompt = f"Should I remember that {spoken[0].lower() + spoken[1:]}?"
         return {
             "pending_id": new.id,
             "confirmation_prompt": prompt,
