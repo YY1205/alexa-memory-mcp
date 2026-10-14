@@ -18,7 +18,7 @@ from starlette.responses import JSONResponse
 
 from memory.service import MemoryError_, MemoryService
 from memory.store import DriveStore, LocalFileStore
-from retrieval.retrievers import BedrockRetriever, KeywordRetriever
+from retrieval.retrievers import KeywordRetriever
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 HERE = Path(__file__).parent
@@ -43,11 +43,7 @@ def build_service() -> MemoryService:
         store = DriveStore(os.environ["DRIVE_FOLDER_ID"], os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
     else:
         store = LocalFileStore(os.getenv("LOCAL_MEMORY_PATH", HERE / "demo_data" / "memories.md"))
-    if os.getenv("RETRIEVER", "keyword") == "bedrock":
-        retriever = BedrockRetriever(os.environ["BEDROCK_MODEL_ID"], os.getenv("AWS_REGION"))
-    else:
-        retriever = KeywordRetriever()
-    return MemoryService(store, retriever)
+    return MemoryService(store, KeywordRetriever())
 
 
 def build_server(service: MemoryService) -> MCPServer:
@@ -64,9 +60,9 @@ def build_server(service: MemoryService) -> MCPServer:
     def recall(query: str, category: str | None = None) -> dict:
         """Look up what the user has asked you to remember. Use whenever the user asks
         about themselves, their plans, preferences or past decisions ("what did I say
-        about...", "when is my..."). Returns current memories only, with a short
-        spoken_answer when available. category is optional: profile, preference,
-        active_context, project, decision, other."""
+        about...", "when is my..."). Returns current memories only; phrase the spoken
+        answer from them. category is optional: profile, preference, active_context,
+        project, decision, other."""
         return safe(service.recall, query, category)
 
     @mcp.tool()

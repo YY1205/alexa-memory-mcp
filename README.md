@@ -22,7 +22,7 @@ Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (
 
 | Tool | Purpose |
 |---|---|
-| `recall(query, category?)` | Current memories relevant to a question, plus a short spoken answer (Bedrock) |
+| `recall(query, category?)` | Current memories relevant to a question (keyword search, served from memory) |
 | `propose_memory(fact, category, review_in_days?)` | Stage a new fact; returns `confirmation_prompt` and `possibly_related` |
 | `supersede_memory(old_memory_id, new_fact)` | Stage a correction |
 | `confirm_memory(pending_id, confirmed)` | Save or discard a staged fact |
@@ -51,15 +51,16 @@ See `.env.example`.
   *demo* folder in Drive, share only that folder with the service account e-mail, and set
   `DRIVE_FOLDER_ID` and `GOOGLE_APPLICATION_CREDENTIALS`. The server reads and writes
   `memories.md` in that folder.
-* **Amazon Bedrock** (`RETRIEVER=bedrock`): set `AWS_REGION` and `BEDROCK_MODEL_ID`. The
-  Converse API picks relevant records and phrases the spoken answer. On any Bedrock error
-  the server falls back to keyword search, so a demo never dead-ends.
+* **No LLM in the request path.** Alexa+ does the language understanding and phrases the
+  answer, so the server only does fast keyword retrieval over an in-memory cache. This
+  keeps every tool call under the Alexa+ 500 ms budget.
 * **Public deployment**: set `HOST=0.0.0.0`, `MCP_BEARER_TOKEN` and `ALLOWED_HOSTS`. The
   server refuses to listen publicly without a token.
 
 ## AWS usage (AWS Builder mini challenge)
 
-* Amazon Bedrock Runtime, Converse API — `retrieval/retrievers.py`
+* Amazon Bedrock (Converse API) — moving to the web simulator as the "Alexa brain"
+  (planned Oct 15); it is no longer called by the MCP server
 * Deployment target: AWS App Runner (container) — *to be documented*
 
 ## Layout
@@ -69,7 +70,7 @@ server.py              MCP server, tool definitions, auth middleware
 memory/schema.py       record fields + Markdown (de)serialisation
 memory/store.py        local file and Google Drive backends
 memory/service.py      memory rules (confirm, supersede, review)
-retrieval/retrievers.py  keyword and Bedrock retrieval
+retrieval/retrievers.py  keyword retrieval
 demo_data/seed.py      fictional demo data
 tests/                 pytest suite
 FRICTION_LOG.md        hackathon friction log
@@ -78,5 +79,6 @@ FRICTION_LOG.md        hackathon friction log
 ## Known limitations
 
 * Single user per deployment (a `scope` field is reserved for household memory).
-* Keyword retrieval only matches shared words; use Bedrock for real conversations.
+* Keyword retrieval only matches shared words; the client (Alexa+ or the simulator) is
+  expected to turn the user's question into good search words.
 * Bearer-token auth is a placeholder until the Alexa+ connection requirements are confirmed.

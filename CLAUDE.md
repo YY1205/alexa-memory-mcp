@@ -8,8 +8,8 @@ or Google Drive) that the user can read and edit by hand; assistants are clients
 file, not its owner. Because voice is error-prone, writes are never silent:
 `propose_memory` / `supersede_memory` stage a fact and return a read-back sentence, and
 only `confirm_memory` saves it. Temporary facts carry review dates (`list_due_reviews`,
-`resolve_review`), and `recall` can use Amazon Bedrock (Converse API) to pick records and
-phrase the spoken answer, falling back to keyword search on error. Solo entry for the
+`resolve_review`). `recall` is fast keyword search over an in-memory cache; no LLM runs
+in the server's request path (Alexa+ does NLU and phrasing). Solo entry for the
 Alexa+ track of the "Build, Ship, Shape: Amazon Developer Hackathon" (deadline
 Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 
@@ -20,8 +20,9 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 - The repo must **actually call** the required tech in code, not just mention it.
 - Demo video must be **under 3 minutes**.
 - Also targeting the **AWS Builder mini challenge**: Bedrock usage must be documented
-  (README "AWS usage" section; code in `retrieval/retrievers.py`). Keep that section
-  accurate when AWS usage changes (App Runner deployment is still "to be documented").
+  (README "AWS usage" section). Bedrock is being moved out of the server into the web
+  simulator (Oct 15); until then no code calls it, so it must land before submission.
+  Keep that section accurate (App Runner deployment is still "to be documented").
 
 ## Working rules
 
