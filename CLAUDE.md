@@ -20,9 +20,9 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 - The repo must **actually call** the required tech in code, not just mention it.
 - Demo video must be **under 3 minutes**.
 - Also targeting the **AWS Builder mini challenge**: Bedrock usage must be documented
-  (README "AWS usage" section). Bedrock is being moved out of the server into the web
-  simulator (Oct 15); until then no code calls it, so it must land before submission.
-  Keep that section accurate (App Runner deployment is still "to be documented").
+  (README "AWS usage" section). Bedrock Converse is called in `simulator/brains.py`
+  (`BedrockBrain.converse`), never by the MCP server. Keep that section accurate (App
+  Runner deployment is still "to be documented").
 
 ## Alexa+ constraints and plan
 
@@ -39,9 +39,17 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
     RFC 9728; AS metadata at `/.well-known/oauth-authorization-server`.
   * Alexa+ does NLU and response generation itself; the server returns standard MCP
     results (no LLM in the server).
+- Simulator (`simulator/`, port 8001): a real MCP client (official Python client, a
+  short-lived connection per turn). The page is plain HTML/CSS/JS (`simulator/static/`, no
+  build step, must work in Chrome). Brain: `SIM_BRAIN=bedrock` (Converse tool loop) or
+  `scripted` (deterministic, offline). `ScriptedBrain` must keep handling exactly the
+  golden conversations in `docs/demo-script.md`; `tests/test_simulator.py` checks them. If
+  you change a golden line, change all three together.
+- No logos or trademarks on the page; call it "Simulated Alexa+".
 - Plan (2026):
-  * Oct 14: server latency (cache, write-behind, Bedrock out of the server).
-  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain".
+  * Oct 14: server latency (cache, write-behind, Bedrock out of the server). Done.
+  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain". Done early, Oct 14 (Bedrock
+    untested until AWS credentials and BEDROCK_MODEL_ID are set up).
   * Oct 17-18: OAuth 2.1 account linking.
   * Oct 19: real Google Drive, Agent Skill, addon.json.
   * Oct 20: deploy. Oct 21: polish/docs. Oct 22: video + submit.
@@ -73,4 +81,13 @@ python3 -m venv .venv
 
 # latency benchmark against a running server (writes benchmark records: demo data only)
 .venv/bin/python scripts/bench.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN"
+
+# demo: memory server :8000 + Simulated Alexa+ :8001 on a temp copy of the demo data
+SIM_BRAIN=scripted scripts/run_demo.sh                       # offline
+BEDROCK_MODEL_ID=... AWS_REGION=... scripts/run_demo.sh      # Bedrock brain
+
+# Bedrock smoke check (manual, costs money): conversations 1-2 -> proof/bedrock-smoke.txt
+.venv/bin/python scripts/bedrock_smoke.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN"
 ```
+
+Never read, print or store AWS credentials; rely on the default credential chain.

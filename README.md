@@ -29,7 +29,26 @@ Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (
 | `list_due_reviews()` | Temporary facts whose review date has passed |
 | `resolve_review(memory_id, still_true, review_in_days?)` | Keep or retire a stale fact |
 
+Resource: `memory://memories.md` (`text/markdown`), the canonical memory file as stored.
+
 Transport: Streamable HTTP at `/mcp`, MCP protocol 2025-11-25 (Python SDK `mcp` 2.x).
+
+## Simulated Alexa+ (the judged demo)
+
+Hackathon participants can't deploy to real Alexa+ (the Alexa AI CLI, MCP Toolkit and
+devices are partner-gated), so `simulator/` plays Alexa+ as a **real MCP client** of this
+server: a web page styled like a smart display, with voice in (Web Speech API) and out
+(speech synthesis), an *Under the hood* panel showing every MCP tool call and its latency
+against the 500 ms budget, and *Your memory file* rendered live from the MCP resource.
+
+```bash
+SIM_BRAIN=scripted scripts/run_demo.sh      # offline, deterministic demo brain
+# or with Amazon Bedrock as the "Alexa brain" (default AWS credential chain):
+BEDROCK_MODEL_ID=<model or inference profile id> AWS_REGION=us-east-1 scripts/run_demo.sh
+```
+
+Then open http://127.0.0.1:8001 in Chrome. The golden conversations are in
+[docs/demo-script.md](docs/demo-script.md).
 
 ## Run locally
 
@@ -37,7 +56,7 @@ Transport: Streamable HTTP at `/mcp`, MCP protocol 2025-11-25 (Python SDK `mcp` 
 pip install -r requirements.txt
 python demo_data/seed.py          # fictional demo persona "Sam"
 python server.py                  # http://127.0.0.1:8000/mcp
-python -m pytest -q               # unit tests + an end-to-end HTTP test
+python -m pytest -q               # unit, end-to-end HTTP, latency and simulator tests
 python scripts/bench.py http://127.0.0.1:8000/mcp   # p50/p95/max per tool (demo data only)
 ```
 
@@ -57,12 +76,27 @@ See `.env.example`.
   keeps every tool call under the Alexa+ 500 ms budget.
 * **Public deployment**: set `HOST=0.0.0.0`, `MCP_BEARER_TOKEN` and `ALLOWED_HOSTS`. The
   server refuses to listen publicly without a token.
+* **Demo reset** (`DEMO_ADMIN=1`): enables `POST /admin/reset`, which restores the fictional
+  demo data. Off by default; behind the bearer token when one is set.
+* **Simulator** (`python -m simulator.app`, port 8001): `MCP_SERVER_URL`, `MCP_BEARER_TOKEN`,
+  `SIM_BRAIN=bedrock|scripted`, `BEDROCK_MODEL_ID`, `AWS_REGION`. On a non-local host it
+  requires `SIM_ADMIN_TOKEN`, which then protects *Reset demo*.
 
 ## AWS usage (AWS Builder mini challenge)
 
-* Amazon Bedrock (Converse API) — moving to the web simulator as the "Alexa brain"
-  (planned Oct 15); it is no longer called by the MCP server
-* Deployment target: AWS App Runner (container) — *to be documented*
+* **Amazon Bedrock Runtime, Converse API with tool use**: the simulator's "Alexa brain".
+  - Call site: `simulator/brains.py`, `BedrockBrain.converse()`: `boto3`
+    `bedrock-runtime` client, `client.converse(modelId=..., system=..., messages=...,
+    toolConfig=...)`.
+  - The tool loop is in `simulator/agent.py`, `Agent._turn()`: MCP `tools/list` schemas are
+    converted to Bedrock `toolSpec`s (`simulator/mcp_link.py`, `to_bedrock_tool()`); each
+    `toolUse` the model returns is executed on the MCP server and fed back as `toolResult`.
+  - Config: `SIM_BRAIN=bedrock` (default), `BEDROCK_MODEL_ID`, `AWS_REGION`; credentials
+    from the default AWS credential chain (never read or stored by the app).
+  - Manual check: `scripts/bedrock_smoke.py` → `proof/bedrock-smoke.txt`.
+* The MCP server itself never calls Bedrock (keeps tool calls < 500 ms; enforced by
+  `tests/test_latency.py::test_server_never_imports_boto3`).
+* Deployment target: AWS App Runner (container): *to be documented*
 
 ## Layout
 
@@ -74,6 +108,15 @@ memory/cache.py        in-memory cache, Drive write-behind, refresh + merge
 memory/service.py      memory rules (confirm, supersede, review)
 retrieval/retrievers.py  keyword retrieval
 demo_data/seed.py      fictional demo data
+simulator/app.py       Simulated Alexa+ web app (Starlette, port 8001)
+simulator/agent.py     Converse tool-use loop, per-session history, Alexa system prompt
+simulator/brains.py    BedrockBrain (Converse) and ScriptedBrain (offline demo)
+simulator/mcp_link.py  official MCP client wrapper, MCP schema -> Bedrock toolSpec
+simulator/static/      the web page (plain HTML/CSS/JS)
+scripts/run_demo.sh    start server + simulator on a temp copy of the demo data
+scripts/bench.py       latency benchmark;  scripts/bedrock_smoke.py  Bedrock smoke check
+docs/demo-script.md    golden demo conversations
+proof/                 latency, Inspector and Bedrock evidence
 tests/                 pytest suite
 FRICTION_LOG.md        hackathon friction log
 ```
