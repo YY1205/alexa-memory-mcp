@@ -1,0 +1,157 @@
+# 2026-10-14T23:27:14Z | MCP Inspector 2.11.0 | server: python server.py (bearer token on)
+$ npx @modelcontextprotocol/inspector --cli http://127.0.0.1:8000/mcp --method tools/list --header "Authorization: Bearer ***"
+{
+  "tools": [
+    {
+      "name": "recall",
+      "description": "Look up what the user has asked you to remember. Use whenever the user asks\nabout themselves, their plans, preferences or past decisions (\"what did I say\nabout...\", \"when is my...\"). Returns current memories only; phrase the spoken\nanswer from them. category is optional: profile, preference, active_context,\nproject, decision, other.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Category"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "recallArguments"
+      }
+    },
+    {
+      "name": "propose_memory",
+      "description": "Prepare to save a new fact the user wants remembered. Does NOT save yet:\nread confirmation_prompt aloud, then call confirm_memory with the answer.\nWrite fact as a full sentence about the user in third person (\"The user's\ndentist appointment is on Friday.\"). Set review_in_days for temporary facts\n(plans, deadlines, ongoing situations) so they get re-checked later.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fact": {
+            "title": "Fact",
+            "type": "string"
+          },
+          "category": {
+            "default": "other",
+            "title": "Category",
+            "type": "string"
+          },
+          "review_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Review In Days"
+          }
+        },
+        "required": [
+          "fact"
+        ],
+        "title": "propose_memoryArguments"
+      }
+    },
+    {
+      "name": "supersede_memory",
+      "description": "Prepare to replace a memory that is no longer true (the user corrected it or\nthings changed). The old memory is kept as history, not deleted. Does NOT save\nyet: read confirmation_prompt aloud, then call confirm_memory.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "old_memory_id": {
+            "title": "Old Memory Id",
+            "type": "string"
+          },
+          "new_fact": {
+            "title": "New Fact",
+            "type": "string"
+          }
+        },
+        "required": [
+          "old_memory_id",
+          "new_fact"
+        ],
+        "title": "supersede_memoryArguments"
+      }
+    },
+    {
+      "name": "confirm_memory",
+      "description": "Finish a propose_memory or supersede_memory call with the user's spoken\nanswer: confirmed=true saves it, false discards it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pending_id": {
+            "title": "Pending Id",
+            "type": "string"
+          },
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pending_id",
+          "confirmed"
+        ],
+        "title": "confirm_memoryArguments"
+      }
+    },
+    {
+      "name": "list_due_reviews",
+      "description": "List temporary memories whose review date has passed, so you can ask the\nuser whether each one is still true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "title": "list_due_reviewsArguments"
+      }
+    },
+    {
+      "name": "resolve_review",
+      "description": "Record the user's answer to \"is this still true?\". still_true=false retires\nthe memory (kept as history). Optionally schedule the next check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {
+            "title": "Memory Id",
+            "type": "string"
+          },
+          "still_true": {
+            "title": "Still True",
+            "type": "boolean"
+          },
+          "review_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Review In Days"
+          }
+        },
+        "required": [
+          "memory_id",
+          "still_true"
+        ],
+        "title": "resolve_reviewArguments"
+      }
+    }
+  ]
+}
+# exit code: 0
