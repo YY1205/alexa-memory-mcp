@@ -3,7 +3,9 @@
 * The backing store is loaded once at startup; every read is served from memory.
 * Writes update memory immediately. With write_behind=False (local file) they are
   also persisted before save() returns; with write_behind=True (Google Drive) a
-  background thread persists them, debounced, and close() flushes on shutdown.
+  background thread persists them once writes pause for `debounce` seconds (or at
+  the latest `max_wait` seconds after the first unsaved write, so a steady stream
+  of writes can't postpone saving forever); close() flushes on shutdown.
 * While nothing is unsaved, the background thread re-reads the backing store every
   refresh_interval seconds, so hand edits to memories.md are picked up.
 * Every persist re-reads the backing store first and does a three-way merge against
@@ -54,10 +56,11 @@ def three_way_merge(base: list[MemoryRecord], local: list[MemoryRecord],
 
 class CachedStore:
     def __init__(self, backing: MemoryStore, *, write_behind: bool = False,
-                 debounce: float = 2.0, refresh_interval: float = 30.0):
+                 debounce: float = 2.0, max_wait: float = 10.0, refresh_interval: float = 30.0):
         self.backing = backing
         self.write_behind = write_behind
         self.debounce = debounce
+        self.max_wait = max_wait
         self.refresh_interval = refresh_interval
         # Held by MemoryService around each load-modify-save, and by this class
         # whenever it replaces the cached records. Never held during backing I/O
@@ -69,6 +72,7 @@ class CachedStore:
         self._dirty = False           # local writes not yet persisted
         self._generation = 0          # bumped on every save()
         self._last_write = 0.0
+        self._dirty_since = 0.0
         self._last_refresh = time.monotonic()
         # One backing-store sync at a time. Synchronous mode persists inside save(),
         # which runs under self.lock, so it shares that lock (fixed lock order).
@@ -87,8 +91,9 @@ class CachedStore:
         with self.lock:
             self._records = _copy(records)
             self._generation += 1
-            self._dirty = True
             self._last_write = time.monotonic()
+            if not self._dirty:
+                self._dirty, self._dirty_since = True, self._last_write
             if not self.write_behind:
                 self._sync()  # fast local file: persist before returning
                 return
@@ -124,9 +129,9 @@ class CachedStore:
             now = time.monotonic()
             try:
                 with self.lock:
-                    dirty, last_write = self._dirty, self._last_write
+                    dirty, last_write, dirty_since = self._dirty, self._last_write, self._dirty_since
                 if dirty:
-                    if now - last_write >= self.debounce:
+                    if now - last_write >= self.debounce or now - dirty_since >= self.max_wait:
                         self._sync()
                 elif now - self._last_refresh >= self.refresh_interval:
                     self.refresh()
@@ -174,6 +179,8 @@ class CachedStore:
                 if self._generation == generation:
                     self._records = _copy(merged)
                     self._dirty = False
+                elif self._dirty_since:
+                    self._dirty_since = time.monotonic()  # newer writes get a fresh max_wait
                 else:
                     # Writes arrived during the save: keep them on top of the merge.
                     self._records, _ = three_way_merge(local, self._records, merged)

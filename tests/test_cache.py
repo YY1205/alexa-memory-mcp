@@ -25,6 +25,7 @@ class FakeStore:
         self.records = [replace(r, tags=list(r.tags)) for r in records]
         self.save_delay = save_delay
         self.loads = 0
+        self.save_starts = 0
         self.saves = 0
 
     def load(self):
@@ -32,6 +33,7 @@ class FakeStore:
         return [replace(r, tags=list(r.tags)) for r in self.records]
 
     def save(self, records):
+        self.save_starts += 1
         time.sleep(self.save_delay)
         self.records = [replace(r, tags=list(r.tags)) for r in records]
         self.saves += 1
@@ -108,6 +110,20 @@ def test_write_behind_is_debounced():
     assert wait_until(lambda: not store.dirty)
     assert backing.saves == 1
     store.close()
+
+
+def test_steady_writes_still_persist_within_max_wait():
+    backing = FakeStore(RECORDS)
+    store = CachedStore(backing, write_behind=True, debounce=0.2, max_wait=0.3, refresh_interval=3600)
+    end = time.monotonic() + 1.0
+    i = 0
+    while time.monotonic() < end:  # never pauses long enough for the debounce
+        store.save(edit(store.load(), "MEM-0003", fact=f"Variant {i}."))
+        i += 1
+        time.sleep(0.01)
+    assert backing.saves >= 1
+    store.close()
+    assert backing.records[2].fact == f"Variant {i - 1}."
 
 
 def test_refresh_picks_up_hand_edits(stores):
