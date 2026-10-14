@@ -38,6 +38,7 @@ pip install -r requirements.txt
 python demo_data/seed.py          # fictional demo persona "Sam"
 python server.py                  # http://127.0.0.1:8000/mcp
 python -m pytest -q               # unit tests + an end-to-end HTTP test
+python scripts/bench.py http://127.0.0.1:8000/mcp   # p50/p95/max per tool (demo data only)
 ```
 
 Inspect it with the MCP Inspector: `npx @modelcontextprotocol/inspector`, connect to

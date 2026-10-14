@@ -24,6 +24,28 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
   simulator (Oct 15); until then no code calls it, so it must land before submission.
   Keep that section accurate (App Runner deployment is still "to be documented").
 
+## Alexa+ constraints and plan
+
+- Participants have **no access** to the Alexa AI CLI, MCP Toolkit or devices
+  (partner-gated). The track allows a simulated Alexa+ experience via a web app, so the
+  judged demo is a **web simulator that is a real MCP client** of this server.
+- Alexa+ requirements the server must meet:
+  * Streamable HTTP, MCP spec 2025-11-25+.
+  * Round-trip tool latency **< 500 ms** (proof: `scripts/bench.py`, `tests/test_latency.py`,
+    `proof/latency-local.txt`). Keep storage and LLM calls out of the request path:
+    reads come from the in-memory cache (`memory/cache.py`), Drive writes are write-behind.
+  * Auth: OAuth 2.1 authorization code + PKCE (S256); unauthenticated requests get
+    **401 without a `WWW-Authenticate` header**; Protected Resource Metadata per
+    RFC 9728; AS metadata at `/.well-known/oauth-authorization-server`.
+  * Alexa+ does NLU and response generation itself; the server returns standard MCP
+    results (no LLM in the server).
+- Plan (2026):
+  * Oct 14: server latency (cache, write-behind, Bedrock out of the server).
+  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain".
+  * Oct 17-18: OAuth 2.1 account linking.
+  * Oct 19: real Google Drive, Agent Skill, addon.json.
+  * Oct 20: deploy. Oct 21: polish/docs. Oct 22: video + submit.
+
 ## Working rules
 
 - **Never use real personal data.** Demo data is the fictional persona "Sam" in
@@ -48,4 +70,7 @@ python3 -m venv .venv
 
 # run tests (unit + end-to-end Streamable HTTP test)
 .venv/bin/python -m pytest -q
+
+# latency benchmark against a running server (writes benchmark records: demo data only)
+.venv/bin/python scripts/bench.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN"
 ```
