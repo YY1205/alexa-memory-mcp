@@ -23,7 +23,7 @@ from demo_data.seed import RECORDS  # noqa: E402
 from memory.cache import CachedStore  # noqa: E402
 from memory.service import MemoryService  # noqa: E402
 from tests.test_cache import FakeStore  # noqa: E402
-from tests.test_memory import _free_port  # noqa: E402
+from tests.conftest import free_port  # noqa: E402
 
 BUDGET_MS = 500
 
@@ -35,7 +35,7 @@ def slow_drive_server(monkeypatch):
     backing = FakeStore(RECORDS, save_delay=1.0)
     store = CachedStore(backing, write_behind=True, debounce=0.05, max_wait=0.2,
                         refresh_interval=3600)
-    port = _free_port()
+    port = free_port()
     srv = uvicorn.Server(uvicorn.Config(server.build_app(MemoryService(store)), host="127.0.0.1",
                                         port=port, log_level="warning"))
     thread = threading.Thread(target=srv.run, daemon=True)
@@ -67,3 +67,11 @@ def test_every_tool_p95_under_budget_with_slow_persistence(slow_drive_server):
     store.close()
     facts = {r.fact for r in backing.records}
     assert "Benchmark fact number 29." in facts
+
+
+def test_server_never_imports_boto3():
+    """Bedrock lives in the simulator; the MCP server's request path stays model-free."""
+    import subprocess
+
+    code = "import sys, server; sys.exit(1 if 'boto3' in sys.modules else 0)"
+    assert subprocess.run([sys.executable, "-c", code], cwd=ROOT).returncode == 0

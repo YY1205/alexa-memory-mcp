@@ -1,9 +1,5 @@
 import json
-import os
-import socket
-import subprocess
 import sys
-import time
 from datetime import date
 from pathlib import Path
 
@@ -86,35 +82,6 @@ def test_errors_are_speakable(service):
 
 
 # ---------- end to end over Streamable HTTP ----------
-
-def _free_port():
-    s = socket.socket()
-    s.bind(("127.0.0.1", 0))
-    port = s.getsockname()[1]
-    s.close()
-    return port
-
-
-@pytest.fixture
-def http_server(tmp_path):
-    mem = tmp_path / "memories.md"
-    mem.write_text(to_markdown(RECORDS))
-    port = _free_port()
-    env = {**os.environ, "PORT": str(port), "LOCAL_MEMORY_PATH": str(mem), "MCP_BEARER_TOKEN": "test-token",
-           "DEMO_ADMIN": "1"}
-    proc = subprocess.Popen([sys.executable, "server.py"], cwd=ROOT, env=env,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    url = f"http://127.0.0.1:{port}"
-    for _ in range(50):
-        try:
-            httpx.get(f"{url}/healthz", timeout=0.2)
-            break
-        except httpx.HTTPError:
-            time.sleep(0.1)
-    yield url
-    proc.terminate()
-    proc.wait(5)
-
 
 def test_rejects_missing_token(http_server):
     r = httpx.post(f"{http_server}/mcp", json={})
