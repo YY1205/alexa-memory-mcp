@@ -60,13 +60,20 @@ class BedrockBrain:
         if client is None:
             import boto3
             from botocore.config import Config
-            from botocore.exceptions import NoRegionError
+            from botocore.exceptions import BotoCoreError, MissingDependencyException, NoRegionError
 
             try:
+                # Bedrock calls occasionally stall; a voice turn that waits a minute is
+                # useless, so fail fast (15 s read timeout, one retry) and say so.
                 client = boto3.client("bedrock-runtime", region_name=region, config=Config(
-                    connect_timeout=5, read_timeout=60, retries={"max_attempts": 2, "mode": "standard"}))
+                    connect_timeout=5, read_timeout=15, retries={"max_attempts": 2, "mode": "standard"}))
             except NoRegionError as e:
                 raise BrainError("No AWS region configured. Set AWS_REGION (e.g. us-east-1).") from e
+            except MissingDependencyException as e:
+                raise BrainError("Your AWS credentials need an extra SDK package (for example `aws login` "
+                                 "credentials need botocore[crt]). Run: pip install -r requirements.txt") from e
+            except BotoCoreError as e:
+                raise BrainError(f"AWS SDK setup failed: {type(e).__name__}") from e
         self._client = client
 
     def converse(self, system: str, messages: list[dict], tool_config: dict) -> dict:

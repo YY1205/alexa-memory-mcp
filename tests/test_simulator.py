@@ -214,6 +214,18 @@ class _FakeBedrock:
         raise self.exc
 
 
+def test_bedrock_sdk_setup_errors_are_clear(monkeypatch):
+    import boto3
+    from botocore.exceptions import MissingDependencyException
+
+    def fail(*args, **kwargs):
+        raise MissingDependencyException(msg="needs botocore[crt]")
+
+    monkeypatch.setattr(boto3, "client", fail)
+    with pytest.raises(BrainError, match="botocore\\[crt\\]"):
+        BedrockBrain("some-model", "us-east-1")
+
+
 def test_bedrock_missing_model_id_is_a_clear_error():
     with pytest.raises(BrainError, match="BEDROCK_MODEL_ID"):
         BedrockBrain("", client=_FakeBedrock(None))
