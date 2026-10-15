@@ -15,7 +15,7 @@ SERVER_PORT="${PORT:-8000}"
 SIM_PORT="${SIM_PORT:-8001}"
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/alexa-memory-demo.XXXXXX")"
-cp demo_data/memories.md "$WORK/memories.md"
+"$PY" demo_data/seed.py "$WORK/memories.md" >/dev/null  # dates relative to today
 
 # A throwaway token for this run only; both processes get it via the environment.
 export MCP_BEARER_TOKEN="${MCP_BEARER_TOKEN:-$("$PY" -c 'import secrets; print(secrets.token_urlsafe(32))')}"

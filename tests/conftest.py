@@ -5,6 +5,7 @@ import subprocess
 import sys
 import time
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -13,10 +14,13 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from demo_data.seed import RECORDS  # noqa: E402
+from demo_data.seed import build_records  # noqa: E402
 from memory.schema import to_markdown  # noqa: E402
 
 TOKEN = "test-token"
+# Every test sees the same "today" (also pinned in the server subprocess via DEMO_TODAY).
+TEST_TODAY = date(2026, 10, 22)
+TEST_RECORDS = build_records(TEST_TODAY)
 
 
 def free_port():
@@ -31,10 +35,10 @@ def free_port():
 def running_server(workdir: Path):
     """python server.py on a fresh copy of the demo data; yields the base URL."""
     mem = workdir / "memories.md"
-    mem.write_text(to_markdown(RECORDS))
+    mem.write_text(to_markdown(TEST_RECORDS))
     port = free_port()
     env = {**os.environ, "PORT": str(port), "LOCAL_MEMORY_PATH": str(mem), "MCP_BEARER_TOKEN": TOKEN,
-           "DEMO_ADMIN": "1"}
+           "DEMO_ADMIN": "1", "DEMO_TODAY": TEST_TODAY.isoformat()}
     proc = subprocess.Popen([sys.executable, "server.py"], cwd=ROOT, env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     url = f"http://127.0.0.1:{port}"

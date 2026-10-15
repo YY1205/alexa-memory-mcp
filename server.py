@@ -9,6 +9,7 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+from datetime import date
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
@@ -40,6 +41,12 @@ Voice rules:
 """
 
 
+def today() -> date:
+    """Real date, unless DEMO_TODAY (ISO date) pins it for tests and demo recordings."""
+    pinned = os.getenv("DEMO_TODAY")
+    return date.fromisoformat(pinned) if pinned else date.today()
+
+
 def build_service() -> MemoryService:
     # Reads come from memory. Drive writes go out in the background so no tool call
     # waits on a network request; local file writes are fast and stay synchronous.
@@ -49,7 +56,7 @@ def build_service() -> MemoryService:
     else:
         backing = LocalFileStore(os.getenv("LOCAL_MEMORY_PATH", HERE / "demo_data" / "memories.md"))
         store = CachedStore(backing, write_behind=False)
-    return MemoryService(store, KeywordRetriever())
+    return MemoryService(store, KeywordRetriever(), today=today)
 
 
 def build_server(service: MemoryService) -> MCPServer:
@@ -116,13 +123,14 @@ def build_server(service: MemoryService) -> MCPServer:
         # server has MCP_BEARER_TOKEN, this route requires it like /mcp does.
         @mcp.custom_route("/admin/reset", methods=["POST"], include_in_schema=False)
         async def reset_demo(request):
-            from demo_data.seed import RECORDS
+            from demo_data.seed import build_records
 
+            records = build_records(today())  # review dates relative to today
             if hasattr(service.store, "reset"):
-                service.store.reset(RECORDS)
+                service.store.reset(records)
             else:
-                service.store.save(RECORDS)
-            return JSONResponse({"ok": True, "records": len(RECORDS)})
+                service.store.save(records)
+            return JSONResponse({"ok": True, "records": len(records)})
 
     return mcp
 

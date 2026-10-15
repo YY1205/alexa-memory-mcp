@@ -1,5 +1,6 @@
 """Simulated Alexa+: golden demo conversations end to end (ScriptedBrain + real server)."""
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,8 @@ from memory.schema import from_markdown  # noqa: E402
 from simulator.app import build_app  # noqa: E402
 from simulator.brains import BedrockBrain, BrainError, ScriptedBrain, UnavailableBrain  # noqa: E402
 from simulator.mcp_link import McpLink, to_bedrock_tool  # noqa: E402
-from tests.conftest import TOKEN  # noqa: E402
+from demo_data.seed import spoken_date  # noqa: E402
+from tests.conftest import TEST_TODAY, TOKEN  # noqa: E402
 
 ADMIN = {"X-Admin-Token": "admin-test"}
 
@@ -94,8 +96,9 @@ def test_conversation_3_correction_supersedes(chat, sim):
     out = chat("The kitchen contractor now starts on the 27th.")
     assert tools(out) == ["propose_memory"]
     assert "MEM-0006" in [m["id"] for m in out["trace"][0]["result"]["possibly_related"]]
+    start = spoken_date(TEST_TODAY + timedelta(days=6))
     assert out["reply_text"] == ("I have a note that you are renovating the kitchen and the contractor "
-                                 "starts on October 20. Does this replace it?")
+                                 f"starts on {start}. Does this replace it?")
     proposal = out["trace"][0]["result"]["pending_id"]
 
     out = chat("Yes.")
@@ -113,8 +116,8 @@ def test_conversation_3_correction_supersedes(chat, sim):
 def test_conversation_4_review(chat, sim):
     out = chat("Is there anything I should update?")
     assert tools(out) == ["list_due_reviews"]
-    assert out["reply_text"].startswith("I have a note that you are waiting to hear back about a job "
-                                        "interview at a design studio. Is that still true?")
+    assert out["reply_text"] == ("I have a note that you are waiting to hear back about a job "
+                                 "interview at a design studio. Is that still true?")  # exactly one overdue
 
     out = chat("I got the job, I start in November.")
     assert tools(out) == ["resolve_review", "propose_memory"]

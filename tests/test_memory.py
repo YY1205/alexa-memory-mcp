@@ -1,6 +1,5 @@
 import json
 import sys
-from datetime import date
 from pathlib import Path
 
 import httpx
@@ -9,12 +8,12 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from demo_data.seed import RECORDS  # noqa: E402
 from memory.schema import from_markdown, to_markdown  # noqa: E402
 from memory.service import MemoryError_, MemoryService  # noqa: E402
 from memory.store import LocalFileStore  # noqa: E402
+from tests.conftest import TEST_RECORDS as RECORDS, TEST_TODAY  # noqa: E402
 
-TODAY = date(2026, 10, 13)
+TODAY = TEST_TODAY
 
 
 @pytest.fixture

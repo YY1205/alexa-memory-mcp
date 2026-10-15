@@ -9,8 +9,8 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 
 ## MEM-0002
 - fact: The user is vegetarian and does not eat fish.
@@ -19,8 +19,8 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 - tags: food
 
 ## MEM-0003
@@ -30,8 +30,8 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 
 ## MEM-0004
 - fact: The user's sister Maya's birthday is on November 2.
@@ -40,20 +40,20 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 - tags: family, birthday
 
 ## MEM-0005
-- fact: The user is training for a half marathon on November 15.
+- fact: The user is training for a half marathon on November 11.
 - category: active_context
 - status: active
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
-- review_after: 2026-11-16
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
+- review_after: 2026-11-12
 - tags: running
 
 ## MEM-0006
@@ -63,8 +63,8 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 - review_after: 2026-10-21
 - tags: home
 
@@ -75,9 +75,9 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
-- review_after: 2026-10-10
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
+- review_after: 2026-10-11
 - tags: job
 
 ## MEM-0008
@@ -87,8 +87,8 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 - tags: car
 
 ## MEM-0009
@@ -98,8 +98,8 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 - tags: dog, pet
 
 ## MEM-0010
@@ -109,6 +109,6 @@ Human-readable canonical memory. Safe to edit by hand: keep one `## ID` heading 
 - source_type: user_explicit
 - confidence: high
 - scope: personal
-- created_at: 2026-10-01T09:00:00+00:00
-- updated_at: 2026-10-01T09:00:00+00:00
+- created_at: 2026-09-30T09:00:00+00:00
+- updated_at: 2026-09-30T09:00:00+00:00
 - tags: language

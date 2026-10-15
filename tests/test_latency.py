@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import server  # noqa: E402
 from bench import RESOURCE_KEY, TOOLS, percentile, report, run_bench  # noqa: E402
-from demo_data.seed import RECORDS  # noqa: E402
+from tests.conftest import TEST_RECORDS as RECORDS  # noqa: E402
 from memory.cache import CachedStore  # noqa: E402
 from memory.service import MemoryService  # noqa: E402
 from tests.test_cache import FakeStore  # noqa: E402

@@ -11,7 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from demo_data.seed import RECORDS  # noqa: E402
+from tests.conftest import TEST_RECORDS as RECORDS  # noqa: E402
 from memory.cache import CachedStore, three_way_merge  # noqa: E402
 from memory.schema import MemoryRecord, to_markdown  # noqa: E402
 from memory.service import MemoryService  # noqa: E402
