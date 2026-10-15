@@ -15,6 +15,8 @@ from memory.schema import MemoryRecord
 _STOP = set(
     "a an the is are was were be to of in on at for and or my me i you your do does did "
     "what whats when where who how about have has had it this that with any".split()
+    # every stored fact is phrased "The user ...", so "user" says nothing about relevance
+    + ["user", "users"]
 )
 
 

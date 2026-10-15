@@ -57,6 +57,12 @@ def test_propose_surfaces_related_memory(service):
     assert "MEM-0006" in [m["id"] for m in p["possibly_related"]]
 
 
+def test_unrelated_memories_are_not_related(service):
+    """Every fact says "The user ..."; that word alone must not make memories related."""
+    p = service.propose("The user's dentist appointment is Friday at 3.", "active_context")
+    assert p["possibly_related"] == []
+
+
 def test_supersede_keeps_history(service):
     p = service.propose("The user now lives in Seattle.", supersedes="MEM-0001")
     service.confirm(p["pending_id"], True)
