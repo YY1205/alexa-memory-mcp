@@ -44,7 +44,7 @@ against the 500 ms budget, and *Your memory file* rendered live from the MCP res
 ```bash
 SIM_BRAIN=scripted scripts/run_demo.sh      # offline, deterministic demo brain
 # or with Amazon Bedrock as the "Alexa brain" (default AWS credential chain):
-BEDROCK_MODEL_ID=<model or inference profile id> AWS_REGION=us-east-1 scripts/run_demo.sh
+BEDROCK_MODEL_ID=us.amazon.nova-2-lite-v1:0 AWS_REGION=us-east-1 scripts/run_demo.sh
 ```
 
 Then open http://127.0.0.1:8001 in Chrome. The golden conversations are in
@@ -93,6 +93,7 @@ See `.env.example`.
     `toolUse` the model returns is executed on the MCP server and fed back as `toolResult`.
   - Config: `SIM_BRAIN=bedrock` (default), `BEDROCK_MODEL_ID`, `AWS_REGION`; credentials
     from the default AWS credential chain (never read or stored by the app).
+  - Tested model: Amazon Nova 2 Lite (`us.amazon.nova-2-lite-v1:0`, us-east-1).
   - Manual check: `scripts/bedrock_smoke.py` → `proof/bedrock-smoke.txt`.
 * The MCP server itself never calls Bedrock (keeps tool calls < 500 ms; enforced by
   `tests/test_latency.py::test_server_never_imports_boto3`).

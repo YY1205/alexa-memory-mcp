@@ -48,8 +48,10 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 - No logos or trademarks on the page; call it "Simulated Alexa+".
 - Plan (2026):
   * Oct 14: server latency (cache, write-behind, Bedrock out of the server). Done.
-  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain". Done early, Oct 14 (Bedrock
-    untested until AWS credentials and BEDROCK_MODEL_ID are set up).
+  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain". Done. Bedrock works
+    with `us.amazon.nova-2-lite-v1:0` in us-east-1 (conversations 1, 2, 5 OK; 3 and 4 need
+    work). Anthropic models need the account's use-case form; Nova Premier is end of life.
+    AWS credentials come from `aws login` (needs `boto3[crt]`).
   * Oct 17-18: OAuth 2.1 account linking.
   * Oct 19: real Google Drive, Agent Skill, addon.json.
   * Oct 20: deploy. Oct 21: polish/docs. Oct 22: video + submit.

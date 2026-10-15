@@ -1,0 +1,22 @@
+# 2026-10-15T07:00:30+00:00 | Bedrock Converse smoke check
+# model: us.amazon.nova-2-lite-v1:0 | region: us-east-1 | server: http://127.0.0.1:8010/mcp
+demo data reset via /admin/reset
+
+=== Conversation 1 Recall ===
+USER:  When is my sister's birthday?
+ALEXA: Your sister's birthday is on November 2.
+       model latency 1876.2 ms
+  -> recall {"query": "sister's birthday"}  [7.1 ms]
+     {"found": true, "spoken_answer": null, "memories": [{"id": "MEM-0004", "fact": "The user's sister Maya's birthday is on November 2.", "category": "profile", "status": "active", "confirmed_by_user": true, "updated_at": "2026-10-01T09:00:00+00:00", "review_after": null}], "needs_review": [], "engine": "keyword"}
+
+=== Conversation 2 Save with confirmation ===
+USER:  Remember that my dentist appointment is Friday at 3.
+ALEXA: Should I remember that your dentist appointment is Friday at 3?
+       model latency 1064.1 ms
+  -> propose_memory {"fact": "The user's dentist appointment is Friday at 3."}  [6.2 ms]
+     {"pending_id": "MEM-0011", "confirmation_prompt": "Should I remember that the user's dentist appointment is Friday at 3?", "possibly_related": []}
+USER:  Yes.
+ALEXA: Got it, I'll remember that.
+       model latency 1051.1 ms
+  -> confirm_memory {"confirmed": true, "pending_id": "MEM-0011"}  [8.9 ms]
+     {"saved": true, "memory": {"id": "MEM-0011", "fact": "The user's dentist appointment is Friday at 3.", "category": "other", "status": "active", "confirmed_by_user": true, "updated_at": "2026-10-15T07:00:29+00:00", "review_after": null}, "replaced": null, "spoken_answer": "Got it, I'll remember that."}
