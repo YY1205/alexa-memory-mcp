@@ -65,6 +65,7 @@ def chat(sim, request):
         assert r.status_code == 200, r.text
         out = r.json()
         assert "error" not in out, out
+        out["all_trace"], out["trace"] = out["trace"], mcp_only(out)  # tests look at MCP calls
         for step in out["trace"]:
             assert step["mcp_latency_ms"] < 500, step
         return out
@@ -77,6 +78,10 @@ def memory(sim) -> dict:
     assert r.status_code == 200
     assert r.json()["backend"] == "local-file" and r.json()["web_view_link"] is None
     return {rec.id: rec for rec in from_markdown(r.json()["markdown"])}
+
+
+def mcp_only(out) -> list[dict]:
+    return [step for step in out["trace"] if step.get("kind") == "mcp"]
 
 
 def tools(out) -> list[str]:
@@ -190,7 +195,7 @@ def test_conversation_6_hand_edit_is_used(tmp_path):
             time.sleep(1.0)
             out = client.post("/api/utterance", json={"session_id": "s6",
                                                       "text": "When does my dog need his heartworm pill?"}).json()
-            assert [s["tool"] for s in out["trace"]] == ["recall"]
+            assert [s["tool"] for s in mcp_only(out)] == ["recall"]
             assert out["reply_text"] == "Your dog Pepper needs his heartworm pill on the first day of each month."
             assert "Pepper" in client.get("/api/memory").json()["markdown"]
 
@@ -275,7 +280,57 @@ def test_read_only_link_cannot_save(module_server):
         link(client, scopes=["memory.read"])
         out = client.post("/api/utterance", json={"session_id": "s",
                                                   "text": "Remember that I hate jazz."}).json()
-        assert "insufficient_scope" in str(out["trace"][0]["result"])
+        assert "insufficient_scope" in str(mcp_only(out)[0]["result"])
+
+
+# ---------- Agent Skill: progressive disclosure ----------
+
+def test_skill_body_loads_when_memory_tools_are_first_used(chat):
+    out = chat("When is my sister's birthday?")
+    assert [s["tool"] for s in out["all_trace"]] == ["skill loaded: portable-memory", "recall"]
+    out = chat("Remember that I hate jazz.")
+    assert [s["tool"] for s in out["all_trace"]] == ["propose_memory"]  # loaded once per session
+
+
+def test_system_prompt_has_skill_metadata_then_body():
+    from simulator.agent import Agent
+    from simulator.mcp_link import ServerProfile
+
+    agent = Agent(link=None, brain=ScriptedBrain())
+    profile = ServerProfile("portable-memory", "SERVER CONTRACT", [])
+    before = agent.system_prompt(profile)
+    assert "- portable-memory: Use the Portable Memory MCP server" in before
+    assert "## Updates: one yes" not in before and "SERVER CONTRACT" in before
+    after = agent.system_prompt(profile, ["portable-memory"])
+    assert "## Updates: one yes" in after and "references/TOOLS.md" in after
+    # the hardcoded prompt no longer duplicates the skill's rules
+    assert "confirmation_prompt" not in before.replace("SERVER CONTRACT", "")
+
+
+def test_skill_references_are_read_on_demand_and_confined():
+    from simulator.agent import Agent
+
+    agent = Agent(link=None, brain=ScriptedBrain())
+    ok = agent._read_reference({"skill": "portable-memory", "path": "references/TOOLS.md"})
+    assert "## confirm_memory(pending_id, confirmed, replaces?)" in ok["content"]
+    for bad in ("../SKILL.md", "/etc/passwd", "references/../../server.py", "SKILL.md"):
+        assert "error" in agent._read_reference({"skill": "portable-memory", "path": bad})
+    assert "error" in agent._read_reference({"skill": "nope", "path": "references/TOOLS.md"})
+
+
+def test_skill_follows_the_agentskills_spec():
+    from simulator.skills import SKILLS_DIR, load_skills, parse_frontmatter
+
+    skills = load_skills()
+    assert [s.name for s in skills] == ["portable-memory"]
+    skill = skills[0]
+    fields, body = parse_frontmatter((skill.root / "SKILL.md").read_text())
+    assert set(fields) <= {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+    assert len(fields["description"]) <= 1024 and len(fields["compatibility"]) <= 500
+    assert len(body.splitlines()) < 500 and len(body) / 4 < 5000  # ~tokens
+    assert skill.mcp_server == "portable-memory" and skill.root.parent == SKILLS_DIR
+    for ref in ("references/TOOLS.md", "references/DIALOGUES.md"):
+        assert f"]({ref})" in body and (skill.root / ref).is_file()
 
 
 def test_model_reasoning_is_never_spoken():

@@ -11,38 +11,32 @@ import anyio
 
 from .brains import Brain, BrainError
 from .mcp_link import McpLink, NotLinked, ServerProfile, to_bedrock_tool_config
+from .skills import READ_REFERENCE_TOOL, Skill, load_skills, reference_tool_spec
 
 log = logging.getLogger(__name__)
 # Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it.
 _THINKING = re.compile(r"<thinking>.*?(</thinking>|$)", re.S | re.I)
 
+# Only the persona lives here. How to use the memory server comes from its own
+# `instructions` (the minimal contract) and from the Agent Skill (skills/), loaded
+# progressively; don't duplicate those rules in this prompt.
 SYSTEM_TEMPLATE = """\
 You are Alexa+, a voice assistant, running in a simulator. Everything you write is
-spoken aloud by a speaker.
-
-How to talk:
-- Reply in one or two short, natural spoken sentences. No markdown, lists, emoji or headings.
-- Talk to the user as "you". Never read ids (like MEM-0004 or pending ids) aloud.
-- Memories are stored in the third person ("The user's ...", "The user is ..."); say
-  them to the user in the second person ("Your ...", "You are ...").
-- When a tool returns confirmation_prompt, say exactly that sentence (it is already
-  written for speech), add nothing else, and wait for the user's answer. Never ask the
-  user to confirm the same thing twice.
-- Use the memory tools whenever the user asks about themselves or tells you something
-  to remember, corrects something, or asks what needs updating. Don't invent facts
-  that the tools did not return.
+spoken aloud by a speaker. Use the tools of connected services when a request needs
+them, and don't invent facts the tools did not return.
 
 The memory server's own instructions. Follow them exactly:
 <server_instructions>
 {instructions}
 </server_instructions>
-"""
+{skills}"""
 
 
 @dataclass
 class Session:
     messages: list[dict] = field(default_factory=list)
     profile: ServerProfile | None = None
+    loaded_skills: list[str] = field(default_factory=list)  # names whose SKILL.md body is in context
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
@@ -60,9 +54,11 @@ def _unwrap(exc: BaseException) -> BaseException:
 
 
 class Agent:
-    def __init__(self, link: McpLink, brain: Brain, max_steps: int = 8, max_turns: int = 20):
+    def __init__(self, link: McpLink, brain: Brain, max_steps: int = 8, max_turns: int = 20,
+                 skills: list[Skill] | None = None):
         self.link = link
         self.brain = brain
+        self.skills = load_skills() if skills is None else skills
         self.max_steps = max_steps
         self.max_turns = max_turns  # user utterances kept as interaction context
         self.sessions: dict[str, Session] = {}
@@ -73,9 +69,30 @@ class Agent:
         else:
             self.sessions.pop(session_id, None)
 
-    @staticmethod
-    def system_prompt(profile: ServerProfile) -> str:
-        return SYSTEM_TEMPLATE.format(instructions=profile.instructions.strip())
+    def system_prompt(self, profile: ServerProfile, loaded: list[str] = ()) -> str:
+        blocks = []
+        if self.skills:  # level 1: name + description of every skill
+            listing = "\n".join(f"- {s.name}: {s.description}" for s in self.skills)
+            blocks.append("\nSkills (their instructions are added here automatically the first time "
+                          f"you use the matching service's tools):\n{listing}\n")
+        for skill in self.skills:  # level 2: the SKILL.md body, once the session uses its tools
+            if skill.name in loaded:
+                refs = ", ".join(skill.references())
+                blocks.append(f'\n<skill name="{skill.name}">\n{skill.body()}\n</skill>\n'
+                              f"Reference files ({READ_REFERENCE_TOOL}): {refs}\n")
+        return SYSTEM_TEMPLATE.format(instructions=profile.instructions.strip(), skills="".join(blocks))
+
+    def _skills_for(self, profile: ServerProfile) -> list[Skill]:
+        return [s for s in self.skills if s.mcp_server in (None, profile.name)]
+
+    def _read_reference(self, args: dict) -> dict:
+        skill = next((s for s in self.skills if s.name == args.get("skill")), None)
+        try:
+            if not skill:
+                raise FileNotFoundError(f"unknown skill {args.get('skill')!r}")
+            return {"path": args.get("path"), "content": skill.read_reference(str(args.get("path")))}
+        except FileNotFoundError as e:
+            return {"error": str(e)}
 
     def _trim(self, messages: list[dict]) -> list[dict]:
         starts = [i for i, m in enumerate(messages)
@@ -99,9 +116,12 @@ class Agent:
                 if session.profile is None:  # new session: discover tools + instructions
                     session.profile = await self.link.profile(client)
                 profile = session.profile
-                system = self.system_prompt(profile)
+                server_tools = {t.name for t in profile.tools}
                 tool_config = to_bedrock_tool_config(profile.tools)
+                if self.skills:
+                    tool_config["tools"].append(reference_tool_spec(self.skills))
                 for _ in range(self.max_steps):
+                    system = self.system_prompt(profile, session.loaded_skills)
                     t0 = time.perf_counter()
                     response = await anyio.to_thread.run_sync(
                         self.brain.converse, system, session.messages, tool_config)
@@ -113,9 +133,25 @@ class Agent:
                         reply = spoken_text(message)
                         break
                     results = []
+                    if server_tools & {u["name"] for u in uses}:  # first use of the memory tools
+                        for skill in self._skills_for(profile):
+                            if skill.name not in session.loaded_skills:
+                                session.loaded_skills.append(skill.name)
+                                trace.append({"tool": f"skill loaded: {skill.name}", "kind": "skill",
+                                              "arguments": {}, "result": f"{skill.name}/SKILL.md added to "
+                                              "the instructions", "mcp_latency_ms": None})
                     for use in uses:
+                        if use["name"] == READ_REFERENCE_TOOL:  # level 3, local file, no MCP
+                            result = self._read_reference(use.get("input") or {})
+                            trace.append({"tool": READ_REFERENCE_TOOL, "kind": "skill",
+                                          "arguments": use.get("input") or {}, "result": result,
+                                          "mcp_latency_ms": None})
+                            results.append({"toolResult": {"toolUseId": use["toolUseId"],
+                                                           "content": [{"json": result}],
+                                                           "status": "error" if "error" in result else "success"}})
+                            continue
                         call = await self.link.call_tool(client, use["name"], use.get("input") or {})
-                        trace.append({"tool": use["name"], "arguments": use.get("input") or {},
+                        trace.append({"tool": use["name"], "kind": "mcp", "arguments": use.get("input") or {},
                                       "result": call.result, "mcp_latency_ms": call.mcp_latency_ms})
                         content = [{"json": call.result}] if isinstance(call.result, dict) \
                             else [{"text": str(call.result)}]

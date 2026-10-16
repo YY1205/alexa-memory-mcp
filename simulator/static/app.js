@@ -195,6 +195,13 @@ function renderTurn(utterance, data) {
 
   if (!data.trace.length) turn.append(el("p", { class: "empty" }, "No MCP tool calls for this turn."));
   for (const call of data.trace) {
+    if (call.kind === "skill") {  // Agent Skill loaded or read: local, no MCP round trip
+      turn.append(el("div", { class: "call skill" },
+        el("div", { class: "call-name" }, call.tool),
+        call.arguments && call.arguments.path ? el("code", { class: "call-args" }, call.arguments.path) : "",
+        el("div", { class: "budget-label" }, "Agent Skill · local, no MCP call")));
+      continue;
+    }
     const ms = call.mcp_latency_ms;
     const pct = Math.min(100, (ms / BUDGET_MS) * 100);
     const level = ms >= BUDGET_MS ? "bad" : ms >= BUDGET_MS * 0.6 ? "warn" : "";
