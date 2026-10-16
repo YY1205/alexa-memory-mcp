@@ -135,9 +135,15 @@ class _FailureLimiter:
 
 
 def _json_error(status: int, error: str, description: str) -> JSONResponse:
-    # Deliberately no WWW-Authenticate header (Alexa+ checklist).
-    return JSONResponse({"error": error, "error_description": description}, status_code=status,
-                        headers={"Cache-Control": "no-store"})
+    # Deliberately no WWW-Authenticate header (Alexa+ checklist). `message` mirrors the
+    # 401 example in the Alexa+ account-linking docs; `error_description` is RFC 6749.
+    return JSONResponse({"error": error, "error_description": description, "message": description},
+                        status_code=status, headers={"Cache-Control": "no-store"})
+
+
+def _same_resource(given: str | None, canonical: str) -> bool:
+    """Alexa sends the manifest URL, which may differ from ours by a trailing slash."""
+    return given is not None and given.rstrip("/") == canonical.rstrip("/")
 
 
 def _s256(verifier: str) -> str:
@@ -247,7 +253,7 @@ class OAuthServer:
             return fail("invalid_request", "PKCE with code_challenge_method=S256 is required.")
         if not p.get("resource"):
             return fail("invalid_request", "The resource parameter is required.")
-        if p.get("resource") != self.s.resource:
+        if not _same_resource(p.get("resource"), self.s.resource):
             return fail("invalid_target", "Unknown resource.")
         scopes = (p.get("scope") or " ".join(SCOPES)).split()
         if not scopes or any(s not in SCOPES for s in scopes):
@@ -319,7 +325,7 @@ class OAuthServer:
             return _json_error(401, "invalid_client", "Client authentication failed.")
         grant_type = form.get("grant_type")
         resource = form.get("resource")
-        if resource is not None and resource != self.s.resource:
+        if resource is not None and not _same_resource(resource, self.s.resource):
             return _json_error(400, "invalid_target", "Unknown resource.")
 
         if grant_type == "authorization_code":

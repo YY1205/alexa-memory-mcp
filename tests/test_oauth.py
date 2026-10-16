@@ -73,7 +73,7 @@ def test_unauthenticated_mcp_gets_401_without_www_authenticate(client):
                         json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
         assert r.status_code == 401
         assert "www-authenticate" not in {k.lower() for k in r.headers}
-        assert r.json()["error"] == "invalid_token"
+        assert r.json()["error"] == "invalid_token" and r.json()["message"]  # Alexa docs' 401 body
 
 
 def test_protected_resource_metadata_has_required_fields(client):
@@ -118,6 +118,19 @@ def test_full_happy_path(client):
     assert tokens.scope == "memory.read memory.write"
     r = call_tool(client, tokens.access_token, "propose_memory", {"fact": "The user hates jazz."})
     assert r.status_code == 200 and "pending_id" in r.text
+
+
+def test_resource_with_trailing_slash_and_refresh_without_resource(client):
+    """As documented for Alexa: resource may carry a trailing slash; refresh omits it."""
+    ep = oc.discover(RESOURCE, client)
+    ep.resource = RESOURCE + "/"
+    verifier, challenge = oc.pkce_pair()
+    params = oc.owner_approves(client, oc.authorize_url(ep, CLIENT_ID, SIM_REDIRECT, "s", challenge), PASSPHRASE)
+    tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
+    assert call_tool(client, tokens.access_token, "list_due_reviews", {}).status_code == 200
+    r = client.post("/token", data={"grant_type": "refresh_token", "refresh_token": tokens.refresh_token},
+                    auth=(CLIENT_ID, CLIENT_SECRET))
+    assert r.status_code == 200 and r.json()["refresh_token"]  # a refresh token every time
 
 
 def test_client_secret_post_also_works(client):
