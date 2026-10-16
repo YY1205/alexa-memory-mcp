@@ -4,6 +4,13 @@
 #
 #   scripts/run_demo.sh                    # brain from SIM_BRAIN (default: bedrock)
 #   SIM_BRAIN=scripted scripts/run_demo.sh # offline, deterministic demo brain
+#   MEMORY_BACKEND=drive DRIVE_FOLDER_ID=... GOOGLE_APPLICATION_CREDENTIALS=... scripts/run_demo.sh
+#                                          # memories.md in your Google Drive demo folder
+#
+# Local (default): a temporary copy of the demo data, seeded for today.
+# Drive: the existing memories.md in the folder is used as is; nothing is overwritten
+# unless you click "Reset demo". Hand edits in Drive show up within MEMORY_REFRESH_SECONDS
+# (5 s here).
 #
 # Bedrock needs BEDROCK_MODEL_ID, AWS_REGION and AWS credentials in the default
 # credential chain (e.g. AWS_PROFILE). This script never reads them.
@@ -18,8 +25,16 @@ PY="${PYTHON:-.venv/bin/python}"
 SERVER_PORT="${PORT:-8000}"
 SIM_PORT="${SIM_PORT:-8001}"
 
+BACKEND="${MEMORY_BACKEND:-local}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/alexa-memory-demo.XXXXXX")"
-"$PY" demo_data/seed.py "$WORK/memories.md" >/dev/null  # dates relative to today
+if [ "$BACKEND" = "drive" ]; then
+  : "${DRIVE_FOLDER_ID:?set DRIVE_FOLDER_ID to the demo folder id}"
+  : "${GOOGLE_APPLICATION_CREDENTIALS:?set GOOGLE_APPLICATION_CREDENTIALS to the service account key path}"
+  DATA_DESC="Google Drive folder ...${DRIVE_FOLDER_ID: -4}"
+else
+  "$PY" demo_data/seed.py "$WORK/memories.md" >/dev/null  # dates relative to today
+  DATA_DESC="$WORK/memories.md"
+fi
 
 # OAuth for this run: the simulator is the one registered client (like Alexa).
 RANDOM_SECRET() { "$PY" -c 'import secrets; print(secrets.token_urlsafe(32))'; }
@@ -38,13 +53,15 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-LOCAL_MEMORY_PATH="$WORK/memories.md" DEMO_ADMIN=1 HOST=127.0.0.1 PORT="$SERVER_PORT" \
+MEMORY_BACKEND="$BACKEND" LOCAL_MEMORY_PATH="$WORK/memories.md" MEMORY_REFRESH_SECONDS="${MEMORY_REFRESH_SECONDS:-5}" \
+  DEMO_ADMIN=1 HOST=127.0.0.1 PORT="$SERVER_PORT" \
   OWNER_PASSPHRASE_HASH="$OWNER_HASH" OAUTH_TOKEN_STORE="$WORK/tokens.json" \
   "$PY" server.py &
 PIDS+=($!)
 
-for _ in $(seq 50); do
+for _ in $(seq 100); do  # Drive startup downloads the file first
   curl -fs "http://127.0.0.1:$SERVER_PORT/healthz" >/dev/null 2>&1 && break
+  kill -0 "${PIDS[0]}" 2>/dev/null || { echo "The memory server did not start (see the message above)."; exit 1; }
   sleep 0.1
 done
 
@@ -53,7 +70,7 @@ MCP_SERVER_URL="http://127.0.0.1:$SERVER_PORT/mcp" SIM_HOST=127.0.0.1 SIM_PORT="
 PIDS+=($!)
 
 echo
-echo "  Memory server:      http://127.0.0.1:$SERVER_PORT/mcp   (data: $WORK/memories.md)"
+echo "  Memory server:      http://127.0.0.1:$SERVER_PORT/mcp   (data: $DATA_DESC)"
 echo "  Simulated Alexa+:   http://127.0.0.1:$SIM_PORT          (brain: ${SIM_BRAIN:-bedrock})"
 echo "  Owner passphrase:   $PASSPHRASE   (click Link account, then sign in with it)"
 echo "  Ctrl+C to stop."

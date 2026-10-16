@@ -107,7 +107,7 @@ async def evaluate(url: str, token: str | None, models: list[str], repeats: int)
                     lines.append(f"  YOU: {text}")
                     lines.append(f"  ALEXA: {out['reply_text']}")
                     lines.append(f"     tools: {calls} | model {out['model_latency_ms']:.0f} ms")
-                markdown, _ = await link.read_memory()
+                markdown, _, _ = await link.read_memory()
                 records = {r.id: r for r in from_markdown(markdown)}
                 problems = judge(n, replies, records) + [f"{e} error" for e in errors]
                 passes[n] += not problems

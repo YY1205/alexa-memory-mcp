@@ -9,7 +9,7 @@ const els = {
   form: $("ask-form"), input: $("text-input"), mic: $("mic-btn"), mute: $("mute-btn"), hint: $("hint"),
   trace: $("trace"), memory: $("memory"), memoryRaw: $("memory-raw"), memMeta: $("mem-meta"),
   brainChip: $("brain-chip"), serverChip: $("server-chip"), reset: $("reset-btn"), clock: $("clock"),
-  linkChip: $("link-chip"), linkBtn: $("link-btn"), unlinkBtn: $("unlink-btn"),
+  linkChip: $("link-chip"), linkBtn: $("link-btn"), unlinkBtn: $("unlink-btn"), driveLink: $("drive-link"),
 };
 
 let sessionId = newSessionId();
@@ -239,6 +239,7 @@ async function loadMemory(highlight) {
   if (!ok) {
     els.memMeta.textContent = data.error || "memory file unavailable";
     if (data.linked === false) {
+      els.driveLink.hidden = true;
       lastMemory = null;
       els.memoryRaw.textContent = "";
       els.memory.replaceChildren(el("p", { class: "empty" },
@@ -246,7 +247,10 @@ async function loadMemory(highlight) {
     }
     return;
   }
-  els.memMeta.textContent = `memory://memories.md · read over MCP in ${fmtMs(data.mcp_latency_ms)}`;
+  const where = data.backend === "google-drive" ? "Google Drive" : "local file";
+  els.memMeta.textContent = `memory://memories.md (${where}) · read over MCP in ${fmtMs(data.mcp_latency_ms)}`;
+  els.driveLink.hidden = !data.web_view_link;
+  if (data.web_view_link) els.driveLink.href = data.web_view_link;
   els.memoryRaw.textContent = data.markdown;
   const records = parseMemory(data.markdown);
   const next = Object.fromEntries(records.map((r) => [r.id, JSON.stringify(r)]));

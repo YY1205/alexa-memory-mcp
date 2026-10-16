@@ -91,12 +91,16 @@ class McpLink:
         is_error = bool(result.is_error) or (isinstance(parsed, dict) and "error" in parsed)
         return ToolCall(parsed, is_error, round(latency, 1))
 
-    async def read_memory(self) -> tuple[str, float]:
+    async def read_memory(self) -> tuple[str, float, dict]:
+        """The memory file over MCP, its read latency, and its metadata from
+        resources/list (backend, and webViewLink when it lives in Google Drive)."""
         async with self.connect() as client:
             t0 = time.perf_counter()
             res = await client.read_resource(MEMORY_URI, cache_mode="bypass")
             latency = (time.perf_counter() - t0) * 1000
-        return res.contents[0].text, round(latency, 1)
+            listed = await client.list_resources()
+        meta = next((dict(r.meta or {}) for r in listed.resources if str(r.uri) == MEMORY_URI), {})
+        return res.contents[0].text, round(latency, 1), meta
 
     async def reset_demo(self) -> dict:
         async with httpx.AsyncClient(timeout=10) as http:

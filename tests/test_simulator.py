@@ -75,6 +75,7 @@ def chat(sim, request):
 def memory(sim) -> dict:
     r = sim.get("/api/memory")
     assert r.status_code == 200
+    assert r.json()["backend"] == "local-file" and r.json()["web_view_link"] is None
     return {rec.id: rec for rec in from_markdown(r.json()["markdown"])}
 
 

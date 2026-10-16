@@ -116,7 +116,7 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
 
     async def memory(request: Request):
         try:
-            markdown, latency = await link.read_memory()
+            markdown, latency, file_meta = await link.read_memory()
         except Exception as e:
             err = _unwrap(e)
             if isinstance(err, NotLinked):
@@ -124,7 +124,10 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
                                     status_code=401)
             return JSONResponse({"error": f"Can't read the memory file over MCP: {type(err).__name__}"},
                                 status_code=502)
-        return JSONResponse({"markdown": markdown, "mcp_latency_ms": latency})
+        link_url = file_meta.get("webViewLink")
+        return JSONResponse({"markdown": markdown, "mcp_latency_ms": latency,
+                             "backend": file_meta.get("backend"),
+                             "web_view_link": link_url if str(link_url or "").startswith("https://") else None})
 
     def reset_allowed(request: Request) -> bool:
         if admin_token:
