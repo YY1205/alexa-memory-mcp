@@ -166,6 +166,15 @@ def test_brain_error_is_reported_and_history_stays_valid(module_server):
         assert status["brain_error"] == "No AWS credentials found."
 
 
+def test_model_reasoning_is_never_spoken():
+    from simulator.agent import spoken_text
+
+    msg = {"role": "assistant", "content": [
+        {"text": "<thinking> I will ask the user if it is still true. </thinking> Is that still true?"}]}
+    assert spoken_text(msg) == "Is that still true?"
+    assert spoken_text({"role": "assistant", "content": [{"text": "<thinking>cut off"}]}) == ""
+
+
 # ---------- MCP tool schema -> Bedrock toolSpec ----------
 
 def test_tool_schema_converts_to_bedrock_tool_spec():

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -12,6 +13,8 @@ from .brains import Brain, BrainError
 from .mcp_link import McpLink, ServerProfile, to_bedrock_tool_config
 
 log = logging.getLogger(__name__)
+# Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it.
+_THINKING = re.compile(r"<thinking>.*?(</thinking>|$)", re.S | re.I)
 
 SYSTEM_TEMPLATE = """\
 You are Alexa+, a voice assistant, running in a simulator. Everything you write is
@@ -41,6 +44,12 @@ class Session:
     messages: list[dict] = field(default_factory=list)
     profile: ServerProfile | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+
+def spoken_text(message: dict) -> str:
+    """The part of a model message that is meant to be said aloud."""
+    text = " ".join(b["text"] for b in message["content"] if "text" in b)
+    return re.sub(r"\s+", " ", _THINKING.sub("", text)).strip()
 
 
 def _unwrap(exc: BaseException) -> BaseException:
@@ -101,7 +110,7 @@ class Agent:
                     session.messages.append(message)
                     uses = [b["toolUse"] for b in message["content"] if "toolUse" in b]
                     if response.get("stopReason") != "tool_use" or not uses:
-                        reply = " ".join(b["text"] for b in message["content"] if "text" in b).strip()
+                        reply = spoken_text(message)
                         break
                     results = []
                     for use in uses:
