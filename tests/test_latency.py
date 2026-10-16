@@ -23,19 +23,26 @@ from tests.conftest import TEST_RECORDS as RECORDS  # noqa: E402
 from memory.cache import CachedStore  # noqa: E402
 from memory.service import MemoryService  # noqa: E402
 from tests.test_cache import FakeStore  # noqa: E402
-from tests.conftest import free_port  # noqa: E402
+from tests.conftest import (CLIENT_ID, CLIENT_SECRET, PASSPHRASE, SIM_REDIRECT, free_port,  # noqa: E402
+                            oauth_env)
+from auth import client as oc  # noqa: E402
 
 BUDGET_MS = 500
 
 
 @pytest.fixture
-def slow_drive_server(monkeypatch):
-    monkeypatch.setenv("MCP_BEARER_TOKEN", "bench-token")
+def slow_drive_server(monkeypatch, tmp_path):
+    """The real app with OAuth on, a Drive-like store whose save() sleeps 1 s, and an
+    access token obtained through the full auth code + PKCE flow."""
+    port = free_port()
+    for key, value in oauth_env(tmp_path, port).items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("PORT", str(port))
+    monkeypatch.delenv("MCP_BEARER_TOKEN", raising=False)  # no dev token: OAuth only
     monkeypatch.delenv("ALLOWED_HOSTS", raising=False)
     backing = FakeStore(RECORDS, save_delay=1.0)
     store = CachedStore(backing, write_behind=True, debounce=0.05, max_wait=0.2,
                         refresh_interval=3600)
-    port = free_port()
     srv = uvicorn.Server(uvicorn.Config(server.build_app(MemoryService(store)), host="127.0.0.1",
                                         port=port, log_level="warning"))
     thread = threading.Thread(target=srv.run, daemon=True)
@@ -47,15 +54,20 @@ def slow_drive_server(monkeypatch):
             break
         except httpx.HTTPError:
             time.sleep(0.05)
-    yield f"{url}/mcp", backing, store
+    with httpx.Client(follow_redirects=False) as http:
+        ep = oc.discover(f"{url}/mcp", http)
+        verifier, challenge = oc.pkce_pair()
+        params = oc.owner_approves(http, oc.authorize_url(ep, CLIENT_ID, SIM_REDIRECT, "s", challenge), PASSPHRASE)
+        token = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, http)
+    yield f"{url}/mcp", backing, store, token.access_token
     srv.should_exit = True
     thread.join(10)
     store.close()
 
 
 def test_every_tool_p95_under_budget_with_slow_persistence(slow_drive_server):
-    url, backing, store = slow_drive_server
-    timings = anyio.run(run_bench, url, "bench-token", 30)
+    url, backing, store, token = slow_drive_server
+    timings = anyio.run(run_bench, url, token, 30)
     table, ok = report(timings, BUDGET_MS)
     print("\n" + table)
     assert set(timings) == {*TOOLS, RESOURCE_KEY}  # six tools + the memory file resource
