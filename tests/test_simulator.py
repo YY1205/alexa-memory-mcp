@@ -92,25 +92,27 @@ def test_conversation_2_save_with_confirmation(chat, sim):
     assert rec.fact == "The user's dentist appointment is Friday at 3."
 
 
-def test_conversation_3_correction_supersedes(chat, sim):
+def test_conversation_3_correction_one_yes(chat, sim):
     out = chat("The kitchen contractor now starts on the 27th.")
     assert tools(out) == ["propose_memory"]
-    assert "MEM-0006" in [m["id"] for m in out["trace"][0]["result"]["possibly_related"]]
+    result = out["trace"][0]["result"]
+    assert result["replaces"] == "MEM-0006"
     start = spoken_date(TEST_TODAY + timedelta(days=6))
-    assert out["reply_text"] == ("I have a note that you are renovating the kitchen and the contractor "
-                                 f"starts on {start}. Does this replace it?")
-    proposal = out["trace"][0]["result"]["pending_id"]
+    assert out["reply_text"] == ("This looks like an update to your note that you are renovating the kitchen "
+                                 f"and the contractor starts on {start}. Should I change it to: your kitchen "
+                                 "contractor now starts on the 27th?")
+    pending = result["pending_id"]
+    assert memory(sim)[pending].status == "pending"
 
-    out = chat("Yes.")
-    assert tools(out) == ["confirm_memory", "supersede_memory", "confirm_memory"]
-    assert out["trace"][0]["arguments"] == {"pending_id": proposal, "confirmed": False}
+    out = chat("Yes.")  # one answer: save the new fact and retire the old one
+    assert tools(out) == ["confirm_memory"]
+    assert out["trace"][0]["arguments"] == {"pending_id": pending, "confirmed": True, "replaces": "MEM-0006"}
     assert out["reply_text"] == "Got it, I've updated that."
-    new_id = out["trace"][1]["result"]["pending_id"]
     mem = memory(sim)
-    assert mem["MEM-0006"].status == "historical" and mem["MEM-0006"].superseded_by == new_id
-    assert mem[new_id].status == "active" and "27th" in mem[new_id].fact
-    assert mem[new_id].supersedes == "MEM-0006"
-    assert proposal not in mem or proposal == new_id  # the plain proposal was discarded
+    assert mem["MEM-0006"].status == "historical" and mem["MEM-0006"].superseded_by == pending
+    assert mem[pending].status == "active" and mem[pending].supersedes == "MEM-0006"
+    assert mem[pending].fact == "The user's kitchen contractor now starts on the 27th."
+    assert not [r for r in mem.values() if r.status == "pending"]
 
 
 def test_conversation_4_review(chat, sim):

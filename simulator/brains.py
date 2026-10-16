@@ -14,7 +14,7 @@ import re
 from itertools import count
 from typing import Any, Protocol
 
-from retrieval.retrievers import _tokens
+from memory.speech import IRREGULAR_PAST, MODALS, lower_first, to_you
 
 
 class BrainError(Exception):
@@ -120,13 +120,7 @@ YES = {"yes", "yeah", "yep", "sure", "correct", "right", "please do", "do it", "
        "yes please", "it is", "still true", "that's right"}
 NO = {"no", "nope", "no thanks", "don't", "do not", "never mind", "not really", "cancel"}
 REVIEW_ASK = re.compile(r"\b(anything|something)\b.*\b(update|out of date|check|review)\b|\bout of date\b")
-_IRREGULAR_PAST = {"got", "was", "had", "went", "made", "did", "bought", "moved", "left", "found",
-                   "took", "began", "came", "saw", "met", "sold", "lost", "won", "paid"}
-_MODALS = {"will", "can", "should", "would", "could", "might", "must", "may", "now", "just",
-           "also", "still", "never", "always", "really", "usually"}
 _THIRD = {"am": "is", "have": "has", "do": "does", "go": "goes", "are": "is", "was": "was"}
-_SECOND = {"is": "are", "was": "were", "has": "have", "does": "do", "goes": "go"}
-NOT_RELATED = {"user"}  # every fact mentions "the user"; it says nothing about overlap
 
 
 def _normal(text: str) -> str:
@@ -137,26 +131,13 @@ def _third_person_verb(verb: str) -> str:
     v = verb.lower()
     if v in _THIRD:
         return _THIRD[v]
-    if v in _IRREGULAR_PAST or v in _MODALS or v.endswith("ed") or v.endswith("s"):
+    if v in IRREGULAR_PAST or v in MODALS or v.endswith("ed") or v.endswith("s"):
         return verb
     if re.search(r"(sh|ch|x|z|o)$", v):
         return verb + "es"
     if re.search(r"[^aeiou]y$", v):
         return verb[:-1] + "ies"
     return verb + "s"
-
-
-def _second_person_verb(verb: str) -> str:
-    v = verb.lower()
-    if v in _SECOND:
-        return _SECOND[v]
-    if v in _MODALS or v in _IRREGULAR_PAST or v.endswith("ed") or not v.endswith("s") or v.endswith("ss"):
-        return verb
-    if v.endswith("ies"):
-        return verb[:-3] + "y"
-    if re.search(r"(sh|ch|x|z|o)es$", v):
-        return verb[:-2]
-    return verb[:-1]
 
 
 def to_fact(utterance: str) -> str:
@@ -201,23 +182,6 @@ def to_fact(utterance: str) -> str:
     if not seen_subject and re.match(r"^the\s+(?!user\b)", fact, re.I):
         fact = "the user's " + fact[4:]  # "The kitchen contractor ..." -> "The user's kitchen contractor ..."
     return fact[0].upper() + fact[1:] + "."
-
-
-def to_you(text: str) -> str:
-    """'The user's sister ... ' -> 'Your sister ...' (third to second person, for speech)."""
-    def subject(m: re.Match) -> str:
-        return "you " + _second_person_verb(m.group(1))
-
-    s = re.sub(r"\bthe user's\b", "your", text, flags=re.I)
-    s = re.sub(r"\bthe user (\w+)", subject, s, flags=re.I)
-    s = re.sub(r"\bthe user\b", "you", s, flags=re.I)
-    s = re.sub(r"\btheir\b", "your", s)
-    s = re.sub(r"\bthey (\w+)", lambda m: "you " + _second_person_verb(m.group(1)), s)
-    return s[0].upper() + s[1:] if s else s
-
-
-def _lower_first(s: str) -> str:
-    return s[0].lower() + s[1:] if s else s
 
 
 def _category(fact: str) -> tuple[str, int | None]:
@@ -272,16 +236,6 @@ class ScriptedBrain:
                     calls.append({"name": use.get("name"), "input": use.get("input", {}), "result": result})
         return calls
 
-    @staticmethod
-    def _strongly_related(fact: str, candidates: list[dict]) -> dict | None:
-        mine = _tokens(fact) - NOT_RELATED
-        best, best_overlap = None, 1
-        for c in candidates:
-            overlap = len(mine & (_tokens(c["fact"]) - NOT_RELATED))
-            if overlap > best_overlap:
-                best, best_overlap = c, overlap
-        return best
-
     def _open_question(self, prior: list[dict]) -> tuple | None:
         """What did we ask at the end of the previous turn?"""
         if not prior:
@@ -289,9 +243,8 @@ class ScriptedBrain:
         last = prior[-1]
         r = last["result"] if isinstance(last["result"], dict) else {}
         if last["name"] == "propose_memory" and "pending_id" in r:
-            related = self._strongly_related(last["input"].get("fact", ""), r.get("possibly_related", []))
-            if related:
-                return ("replace", r["pending_id"], related, last["input"].get("fact", ""))
+            if r.get("replaces"):
+                return ("update", r["pending_id"], r["replaces"])
             return ("confirm", r["pending_id"])
         if last["name"] == "supersede_memory" and "pending_id" in r:
             return ("confirm", r["pending_id"])
@@ -316,20 +269,14 @@ class ScriptedBrain:
                 return ("tool", "confirm_memory", {"pending_id": question[1], "confirmed": yes})
             return ("say", last["spoken_answer"])
 
-        if kind == "replace" and (yes or no):
-            _, pending, related, fact = question
-            if no:  # keep both
-                if n == 0:
-                    return ("tool", "confirm_memory", {"pending_id": pending, "confirmed": True})
-                return ("say", "Okay, I'll keep both.")
-            steps = [
-                ("confirm_memory", lambda: {"pending_id": pending, "confirmed": False}),
-                ("supersede_memory", lambda: {"old_memory_id": related["id"], "new_fact": fact}),
-                ("confirm_memory", lambda: {"pending_id": done[1]["result"]["pending_id"], "confirmed": True}),
-            ]
-            if n < len(steps):
-                name, args = steps[n]
-                return ("tool", name, args())
+        if kind == "update" and (yes or no):
+            # One answer settles it: yes saves the new fact and retires the old one.
+            _, pending, old_id = question
+            if n == 0:
+                args = {"pending_id": pending, "confirmed": yes}
+                if yes:
+                    args["replaces"] = old_id
+                return ("tool", "confirm_memory", args)
             return ("say", last["spoken_answer"])
 
         if kind == "review" and utterance.strip():
@@ -353,7 +300,7 @@ class ScriptedBrain:
                 if review:
                     args["review_in_days"] = review
                 return ("tool", "propose_memory", args)
-            return ("say", f"Thanks for the update. {to_you(last['confirmation_prompt'])}")
+            return ("say", f"Thanks for the update. {last['confirmation_prompt']}")
 
         if yes or no:
             return ("say", "Sorry, I'm not sure what you're answering. What would you like to do?")
@@ -366,7 +313,7 @@ class ScriptedBrain:
                     return ("say", "Everything I remember looks up to date.")
                 first = last["memories"][0]
                 more = f" That's one of {last['count']} things to check." if last["count"] > 1 else ""
-                return ("say", f"I have a note that {_lower_first(to_you(first['fact'].rstrip('.')))}. "
+                return ("say", f"I have a note that {lower_first(to_you(first['fact'].rstrip('.')))}. "
                                f"Is that still true?{more}")
             if n == 0:
                 return ("tool", "recall", {"query": utterance.strip()})
@@ -382,11 +329,7 @@ class ScriptedBrain:
             if review:
                 args["review_in_days"] = review
             return ("tool", "propose_memory", args)
-        related = self._strongly_related(fact, last.get("possibly_related", []))
-        if related:
-            return ("say", f"I have a note that {_lower_first(to_you(related['fact'].rstrip('.')))}. "
-                           f"Does this replace it?")
-        return ("say", to_you(last["confirmation_prompt"]))
+        return ("say", last["confirmation_prompt"])  # already phrased for speech by the server
 
     def converse(self, system: str, messages: list[dict], tool_config: dict) -> dict:
         starts = [i for i, m in enumerate(messages) if self._is_utterance(m)]

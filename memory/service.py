@@ -8,12 +8,14 @@ Principles carried over from the AI_SHARED_MEMORY plan:
 """
 from __future__ import annotations
 
+import re
 import threading
 from datetime import date, datetime, timedelta, timezone
 
-from retrieval.retrievers import KeywordRetriever, Retriever
+from retrieval.retrievers import KeywordRetriever, Retriever, strong_match
 
 from .schema import CATEGORIES, MemoryRecord, now_iso, to_markdown
+from .speech import clause
 from .store import MemoryStore
 
 PENDING_TTL = timedelta(hours=24)
@@ -83,6 +85,30 @@ class MemoryService:
         return {"count": len(due), "memories": [r.to_public() for r in due]}
 
     # ---------- write (two-step) ----------
+    @staticmethod
+    def _same_fact(a: str, b: str) -> bool:
+        norm = lambda t: re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()  # noqa: E731
+        return norm(a) == norm(b)
+
+    @staticmethod
+    def _target(rec: MemoryRecord, active: list[MemoryRecord]) -> str | None:
+        """The active memory a pending record would replace (explicitly or by topic)."""
+        if rec.supersedes:
+            return rec.supersedes
+        match = strong_match(rec.fact, active)
+        return match.id if match else None
+
+    def _drop_abandoned_pending(self, records: list[MemoryRecord], fact: str,
+                                target: str | None) -> list[MemoryRecord]:
+        """A new proposal replaces older pending ones for the same fact or the same
+        memory, so abandoned proposals can't pile up within a conversation."""
+        active = [r for r in records if r.status == "active"]
+        return [
+            r for r in records
+            if not (r.status == "pending" and (
+                self._same_fact(r.fact, fact) or (target and self._target(r, active) == target)))
+        ]
+
     def propose(self, fact: str, category: str = "other", review_in_days: int | None = None,
                 supersedes: str | None = None) -> dict:
         fact = fact.strip()
@@ -92,11 +118,17 @@ class MemoryService:
             category = "other"
         with self._lock:
             records = self._drop_expired_pending(self.store.load())
+            active = [r for r in records if r.status == "active"]
+            update_of = None
             if supersedes:
                 old = self._get(records, supersedes)
                 if old.status != "active":
                     raise MemoryError_(f"Memory {supersedes} is not current, so it can't be replaced.")
                 category = old.category
+            else:
+                update_of = strong_match(fact, active)  # looks like a change to an existing memory
+            target = supersedes or (update_of.id if update_of else None)
+            records = self._drop_abandoned_pending(records, fact, target)
             new = MemoryRecord(
                 id=self._next_id(records), fact=fact, category=category, status="pending",
                 review_after=self._review_date(review_in_days), supersedes=supersedes,
@@ -104,21 +136,25 @@ class MemoryService:
             records.append(new)
             self.store.save(records)
 
-        # Similar active memories, so the assistant can ask "does this replace ...?"
-        similar = [] if supersedes else self.retriever.retrieve(
-            fact, [r for r in records if r.status == "active"], 3).records
+        result = {"pending_id": new.id}
         if supersedes:
-            prompt = f'Should I replace "{old.fact}" with "{fact}"?'
+            result["confirmation_prompt"] = (f"Should I change your note that {clause(old.fact)} "
+                                             f"to: {clause(fact)}?")
+        elif update_of:
+            result["confirmation_prompt"] = (f"This looks like an update to your note that "
+                                             f"{clause(update_of.fact)}. Should I change it to: {clause(fact)}?")
+            result["replaces"] = update_of.id
         else:
-            spoken = fact.rstrip(".!? ")
-            prompt = f"Should I remember that {spoken[0].lower() + spoken[1:]}?"
-        return {
-            "pending_id": new.id,
-            "confirmation_prompt": prompt,
-            "possibly_related": [r.to_public() for r in similar],
-        }
+            result["confirmation_prompt"] = f"Should I remember that {clause(fact)}?"
+        # Other similar memories, for context (not needed to confirm).
+        similar = [] if supersedes else [
+            r for r in self.retriever.retrieve(fact, active, 3).records if r is not update_of]
+        result["possibly_related"] = [r.to_public() for r in similar]
+        return result
 
-    def confirm(self, pending_id: str, confirmed: bool) -> dict:
+    def confirm(self, pending_id: str, confirmed: bool, replaces: str | None = None) -> dict:
+        """Save or discard a pending fact. `replaces`: the id of an active memory this
+        fact updates (propose's `replaces`); it is kept as history, not deleted."""
         with self._lock:
             records = self._drop_expired_pending(self.store.load())
             rec = self._get(records, pending_id)
@@ -129,11 +165,22 @@ class MemoryService:
                 self.store.save(records)
                 return {"saved": False, "spoken_answer": "Okay, I won't remember that."}
 
+            target = rec.supersedes or replaces
+            if replaces and rec.supersedes and replaces != rec.supersedes:
+                raise MemoryError_(f"Memory {pending_id} already replaces {rec.supersedes}, not {replaces}.")
+            old = None
+            if target:
+                old = self._get(records, target)
+                if old.status != "active" or old.id == rec.id:
+                    raise MemoryError_(f"Memory {target} is not current, so it can't be replaced.")
+
             ts = now_iso()
             rec.status, rec.source_type, rec.confidence, rec.updated_at = "active", "user_explicit", "high", ts
             replaced = None
-            if rec.supersedes:
-                old = self._get(records, rec.supersedes)
+            if old:
+                rec.supersedes = old.id
+                if rec.category == "other":
+                    rec.category = old.category
                 old.status, old.superseded_by, old.updated_at = "historical", rec.id, ts
                 replaced = old.to_public()
             self.store.save(records)

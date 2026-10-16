@@ -205,7 +205,8 @@ def test_concurrent_tool_calls_stay_consistent(tmp_path, stores):
     def worker(n):
         try:
             for i in range(10):
-                p = service.propose(f"The user owns plant number {n}-{i}.", "other")
+                # distinct topics, so no proposal looks like an update of another
+                p = service.propose(f"The user likes item{n}x{i}.", "other")
                 service.confirm(p["pending_id"], True)
                 ids.append(p["pending_id"])
         except Exception as e:  # pragma: no cover - surfaced by the assert below

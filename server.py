@@ -30,14 +30,23 @@ INSTRUCTIONS = """\
 This server is the user's own long-term memory. The user owns it; it is stored
 as a readable file they can open and edit.
 Voice rules:
-- Never save anything silently. To save, call propose_memory (or supersede_memory
-  for a correction), read the returned confirmation_prompt to the user, and call
-  confirm_memory only with their answer.
-- If propose_memory returns possibly_related memories, ask whether the new fact
-  replaces one of them; if yes, discard the proposal and use supersede_memory.
-- When recall returns needs_review ids, or at a natural moment, ask whether those
-  facts are still true and record the answer with resolve_review.
-- Keep spoken answers short. Do not read ids aloud.
+- Never save anything silently. To save something the user tells you, call
+  propose_memory, read its confirmation_prompt to the user exactly as given (it is
+  already phrased for speech), then call confirm_memory with their answer. Ask only
+  once: one answer is enough.
+- If propose_memory returns `replaces`, the new fact looks like an update to that
+  memory and confirmation_prompt already asks about the change. If the user agrees,
+  call confirm_memory with confirmed=true and replaces=<that id>: this saves the new
+  fact and keeps the old one as history. If they want to keep both, confirm without
+  replaces. If they decline, confirmed=false.
+- Use supersede_memory only when the user corrects a specific memory you have just
+  told them (you know its id); then read its confirmation_prompt and confirm.
+- When recall returns needs_review ids, or the user asks what needs updating, call
+  list_due_reviews, ask whether each fact is still true, and record the answer with
+  resolve_review. If the user gives new information instead, retire the old fact
+  (still_true=false) and propose the new one.
+- Memories are written about "the user" in the third person; speak to the user in
+  the second person. Keep spoken answers short. Do not read ids aloud.
 """
 
 
@@ -81,24 +90,30 @@ def build_server(service: MemoryService) -> MCPServer:
     @mcp.tool()
     def propose_memory(fact: str, category: str = "other", review_in_days: int | None = None) -> dict:
         """Prepare to save a new fact the user wants remembered. Does NOT save yet:
-        read confirmation_prompt aloud, then call confirm_memory with the answer.
-        Write fact as a full sentence about the user in third person ("The user's
-        dentist appointment is on Friday."). Set review_in_days for temporary facts
-        (plans, deadlines, ongoing situations) so they get re-checked later."""
+        read confirmation_prompt to the user as given, then call confirm_memory with
+        their answer. If the result includes `replaces`, the fact looks like an update
+        to that existing memory; pass replaces=<that id> to confirm_memory if the user
+        agrees. Write fact as a full sentence about the user in third person ("The
+        user's dentist appointment is on Friday."). Set review_in_days for temporary
+        facts (plans, deadlines, ongoing situations) so they get re-checked later.
+        Proposing the same fact again replaces the earlier unconfirmed proposal."""
         return safe(service.propose, fact, category, review_in_days)
 
     @mcp.tool()
     def supersede_memory(old_memory_id: str, new_fact: str) -> dict:
-        """Prepare to replace a memory that is no longer true (the user corrected it or
-        things changed). The old memory is kept as history, not deleted. Does NOT save
-        yet: read confirmation_prompt aloud, then call confirm_memory."""
+        """Prepare to replace a specific memory you already know the id of, when the
+        user corrects it. The old memory is kept as history, not deleted. Does NOT
+        save yet: read confirmation_prompt to the user, then call confirm_memory. For
+        new facts that might update an old one, use propose_memory instead."""
         return safe(service.propose, new_fact, supersedes=old_memory_id)
 
     @mcp.tool()
-    def confirm_memory(pending_id: str, confirmed: bool) -> dict:
-        """Finish a propose_memory or supersede_memory call with the user's spoken
-        answer: confirmed=true saves it, false discards it."""
-        return safe(service.confirm, pending_id, confirmed)
+    def confirm_memory(pending_id: str, confirmed: bool, replaces: str | None = None) -> dict:
+        """Finish a propose_memory or supersede_memory call with the user's answer:
+        confirmed=true saves it, false discards it. replaces: the id from
+        propose_memory's `replaces` when the user agreed to the update; the old
+        memory is then kept as history."""
+        return safe(service.confirm, pending_id, confirmed, replaces)
 
     @mcp.tool()
     def list_due_reviews() -> dict:

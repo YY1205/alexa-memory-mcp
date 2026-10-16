@@ -39,7 +39,8 @@ def test_recall_flags_overdue_review(service):
 
 def test_propose_does_not_save_until_confirmed(service):
     p = service.propose("The user's dentist appointment is on Friday at 3pm.", "active_context", 7)
-    assert p["confirmation_prompt"] == "Should I remember that the user's dentist appointment is on Friday at 3pm?"
+    assert p["confirmation_prompt"] == "Should I remember that your dentist appointment is on Friday at 3pm?"
+    assert "replaces" not in p
     assert service.recall("dentist appointment")["found"] is False  # still pending
     out = service.confirm(p["pending_id"], True)
     assert out["saved"] and out["memory"]["confirmed_by_user"]
@@ -52,9 +53,73 @@ def test_rejected_proposal_is_discarded(service):
     assert all(r.id != p["pending_id"] for r in service.store.load())
 
 
-def test_propose_surfaces_related_memory(service):
-    p = service.propose("The user's kitchen contractor now starts on October 27.", "active_context")
-    assert "MEM-0006" in [m["id"] for m in p["possibly_related"]]
+def test_update_is_detected_and_asked_once(service):
+    p = service.propose("The user's kitchen contractor now starts on the 27th.", "active_context")
+    assert p["replaces"] == "MEM-0006"
+    old = {r.id: r for r in service.store.load()}["MEM-0006"].fact.rstrip(".")
+    assert p["confirmation_prompt"] == (
+        f"This looks like an update to your note that {old.replace('The user is', 'you are')}. "
+        "Should I change it to: your kitchen contractor now starts on the 27th?")
+    assert "MEM-0006" not in [m["id"] for m in p["possibly_related"]]
+
+
+def test_one_yes_saves_update_and_keeps_history(service):
+    p = service.propose("The user's kitchen contractor now starts on the 27th.", "active_context")
+    out = service.confirm(p["pending_id"], True, replaces=p["replaces"])
+    assert out["spoken_answer"] == "Got it, I've updated that."
+    by_id = {r.id: r for r in service.store.load()}
+    assert by_id["MEM-0006"].status == "historical"
+    assert by_id["MEM-0006"].superseded_by == p["pending_id"]
+    new = by_id[p["pending_id"]]
+    assert new.status == "active" and new.supersedes == "MEM-0006"
+    assert not [r for r in by_id.values() if r.status == "pending"]
+
+
+def test_update_can_be_kept_as_a_separate_fact(service):
+    p = service.propose("The user's sister Maya's birthday party is on November 3.", "profile")
+    assert p["replaces"] == "MEM-0004"
+    service.confirm(p["pending_id"], True)  # "no, keep both": confirm without replaces
+    by_id = {r.id: r for r in service.store.load()}
+    assert by_id["MEM-0004"].status == "active" and by_id[p["pending_id"]].status == "active"
+
+
+def test_confirm_rejects_bad_replaces(service):
+    p = service.propose("The user hates jazz.", "preference")
+    with pytest.raises(MemoryError_):
+        service.confirm(p["pending_id"], True, replaces="MEM-9999")
+    service.resolve_review("MEM-0007", still_true=False)
+    with pytest.raises(MemoryError_):
+        service.confirm(p["pending_id"], True, replaces="MEM-0007")  # not current any more
+    s = service.propose("The user now lives in Seattle.", supersedes="MEM-0001")
+    with pytest.raises(MemoryError_):
+        service.confirm(s["pending_id"], True, replaces="MEM-0002")  # already targets MEM-0001
+
+
+def test_repeated_proposal_replaces_the_pending_one(service):
+    first = service.propose("The user hates jazz.", "preference")
+    second = service.propose("the user hates jazz", "preference")
+    pending = [r for r in service.store.load() if r.status == "pending"]
+    assert len(pending) == 1 and pending[0].id == second["pending_id"]
+    del first
+
+
+def test_supersede_after_update_proposal_leaves_no_orphan(service):
+    """A model that proposes, then switches to supersede_memory for the same memory,
+    must not leave the first proposal behind."""
+    service.propose("The user's kitchen contractor now starts on the 27th.", "active_context")
+    s = service.propose("The user is renovating the kitchen and the contractor starts on the 27th.",
+                        supersedes="MEM-0006")
+    assert s["confirmation_prompt"].startswith("Should I change your note that you are renovating")
+    pending = [r for r in service.store.load() if r.status == "pending"]
+    assert [r.id for r in pending] == [s["pending_id"]]
+    service.confirm(s["pending_id"], True)
+    assert {r.id: r for r in service.store.load()}["MEM-0006"].status == "historical"
+
+
+def test_unrelated_pending_proposals_are_kept(service):
+    a = service.propose("The user hates jazz.", "preference")
+    b = service.propose("The user's dentist appointment is Friday at 3.", "active_context")
+    assert {r.id for r in service.store.load() if r.status == "pending"} == {a["pending_id"], b["pending_id"]}
 
 
 def test_unrelated_memories_are_not_related(service):
