@@ -1,0 +1,60 @@
+"""addon-package/addon.json uses only documented keys and stays within documented limits."""
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from make_addon import MANIFEST, build, check  # noqa: E402
+
+# Key paths shown in the Alexa+ MCP quickstart's addon.json example (docs, Oct 2026).
+DOCUMENTED = {
+    "manifestVersion", "storeListing", "storeListing.distributionCountries", "storeListing.locales",
+    "storeListing.locales.en-US", "storeListing.locales.en-US.default", "storeListing.locales.en-US.name",
+    "storeListing.locales.en-US.name.value", "storeListing.locales.en-US.name.spokenForm",
+    "storeListing.locales.en-US.name.spokenForm.format", "storeListing.locales.en-US.name.spokenForm.value",
+    "storeListing.locales.en-US.shortDescription", "storeListing.locales.en-US.fullDescription",
+    "storeListing.locales.en-US.examplePhrases", "storeListing.locales.en-US.privacyAndCompliance",
+    "storeListing.locales.en-US.privacyAndCompliance.privacyPolicyUrl",
+    "storeListing.locales.en-US.privacyAndCompliance.termsOfUseUrl",
+    "storeListing.locales.en-US.mediaAssets", "storeListing.locales.en-US.mediaAssets.icons",
+    "storeListing.locales.en-US.mediaAssets.icons.light", "storeListing.locales.en-US.mediaAssets.icons.light[].size",
+    "storeListing.locales.en-US.mediaAssets.icons.light[].uri", "storeListing.locales.en-US.mediaAssets.icons.dark",
+    "storeListing.locales.en-US.mediaAssets.carouselImages",
+    "storeListing.locales.en-US.mediaAssets.carouselImages[].uri",
+    "storeListing.locales.en-US.mediaAssets.carouselImages[].altText",
+    "storeListing.locales.en-US.mediaAssets.carouselImages[].size",
+    "storeListing.locales.en-US.mediaAssets.bannerImages", "integrations", "integrations[].type",
+    "integrations[].config", "integrations[].config.endpoints", "integrations[].config.endpoints.default",
+    "integrations[].config.endpoints.default.type", "integrations[].config.endpoints.default.uri",
+}
+
+
+def paths(node, prefix=""):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            path = f"{prefix}.{key}" if prefix else key
+            yield path
+            yield from paths(value, path)
+    elif isinstance(node, list):
+        for item in node:
+            yield from paths(item, f"{prefix}[]")
+
+
+def test_manifest_uses_only_documented_key_paths():
+    manifest = json.loads(MANIFEST.read_text())
+    assert set(paths(manifest)) <= DOCUMENTED
+
+
+def test_manifest_is_within_documented_limits_and_matches_the_generator():
+    manifest = json.loads(MANIFEST.read_text())
+    assert check(manifest) == []
+    assert manifest == build("https://portable-memory.example.com")  # regenerate, don't hand-edit
+
+
+def test_manifest_points_at_the_served_pages_and_assets():
+    loc = json.loads(MANIFEST.read_text())["storeListing"]["locales"]["en-US"]
+    assert loc["privacyAndCompliance"]["privacyPolicyUrl"].endswith("/privacy")
+    assert loc["privacyAndCompliance"]["termsOfUseUrl"].endswith("/terms")
+    assert all("/addon-assets/" in i["uri"] for i in loc["mediaAssets"]["icons"]["light"])

@@ -1,0 +1,84 @@
+{
+  "manifestVersion": "1.0",
+  "storeListing": {
+    "distributionCountries": [
+      "US"
+    ],
+    "locales": {
+      "en-US": {
+        "default": "DEFAULT",
+        "name": {
+          "value": "Portable Memory",
+          "spokenForm": {
+            "format": "ipa",
+            "value": "ˈpɔɹtəbəl ˈmɛməɹi"
+          }
+        },
+        "shortDescription": "A long-term memory you own: Alexa saves only what you confirm, keeps history, and you can edit the file.",
+        "fullDescription": "Portable Memory gives Alexa a long-term memory that belongs to you. Your memories live in one plain Markdown file, memories.md, in your own Google Drive folder, so you can read and edit it yourself at any time, and any assistant you connect works with the same file.\n\nNothing is saved silently. When you ask Alexa to remember something, it reads the fact back and saves it only after you say yes. If a new fact updates an old one (the contractor now starts on the 27th), Alexa asks once whether to change it; the old fact is kept as history instead of being deleted. Temporary facts such as appointments get a review date, and Alexa can ask whether they are still true.\n\nYou can ask things like when your sister's birthday is, tell Alexa what to remember, correct a fact, or ask whether anything needs updating. If you change the file by hand, Alexa uses your edit within seconds.\n\nSetup: Portable Memory is self-hosted. You run the server, share one Google Drive folder with it, and link your account with your owner passphrase. The server stores only hashed sign-in tokens; see the privacy policy for details.\n\nThis is a hackathon prototype. Don't store passwords, financial or health information.",
+        "examplePhrases": [
+          "When is my sister's birthday?",
+          "Remember that my dentist appointment is Friday at 3.",
+          "The kitchen contractor now starts on the 27th.",
+          "Is there anything in my memory I should update?"
+        ],
+        "privacyAndCompliance": {
+          "privacyPolicyUrl": "https://portable-memory.example.com/privacy",
+          "termsOfUseUrl": "https://portable-memory.example.com/terms"
+        },
+        "mediaAssets": {
+          "icons": {
+            "light": [
+              {
+                "size": "72x72",
+                "uri": "https://portable-memory.example.com/addon-assets/icon-72.png"
+              },
+              {
+                "size": "64x64",
+                "uri": "https://portable-memory.example.com/addon-assets/icon-64.png"
+              },
+              {
+                "size": "88x88",
+                "uri": "https://portable-memory.example.com/addon-assets/icon-88.png"
+              },
+              {
+                "size": "126x126",
+                "uri": "https://portable-memory.example.com/addon-assets/icon-126.png"
+              },
+              {
+                "size": "180x180",
+                "uri": "https://portable-memory.example.com/addon-assets/icon-180.png"
+              },
+              {
+                "size": "241x241",
+                "uri": "https://portable-memory.example.com/addon-assets/icon-241.png"
+              }
+            ],
+            "dark": []
+          },
+          "carouselImages": [
+            {
+              "uri": "https://portable-memory.example.com/addon-assets/carousel-600x900.png",
+              "size": "600x900",
+              "altText": "Portable Memory: your memory is a file you own. Nothing is saved until you say yes."
+            }
+          ],
+          "bannerImages": []
+        }
+      }
+    }
+  },
+  "integrations": [
+    {
+      "type": "MCP",
+      "config": {
+        "endpoints": {
+          "default": {
+            "type": "HTTPS",
+            "uri": "https://portable-memory.example.com/mcp"
+          }
+        }
+      }
+    }
+  ]
+}
