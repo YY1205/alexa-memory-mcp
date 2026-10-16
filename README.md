@@ -61,6 +61,33 @@ server's page with the owner passphrase the script prints (exactly like linking 
 the Alexa app; tokens stay in the simulator). The golden conversations are in
 [docs/demo-script.md](docs/demo-script.md).
 
+## Agent Skill
+
+[`skills/portable-memory/`](skills/portable-memory/SKILL.md) is an
+[Agent Skill](https://agentskills.io/specification) that teaches any agent to use this server
+well: confirm before saving and read `confirmation_prompt` verbatim, one-yes updates with
+`replaces` (or keep both), `supersede_memory` only for explicit corrections, review
+handling, short second-person replies, never reading ids aloud. `SKILL.md` stays short;
+the tool contract and example dialogues are in `references/` and loaded on demand.
+
+The server's own MCP `instructions` stay the minimal, model-agnostic contract (what real
+Alexa+ sees). The simulator loads the skill the way agent runtimes do
+(`simulator/skills.py`): the name and description are always in the system prompt, the
+`SKILL.md` body is added the first time a session uses the memory tools (shown as "skill
+loaded" in *Under the hood*), and reference files are read through a local
+`read_skill_reference` tool when needed. With the skill as the only source of the rules,
+Nova Pro passes all six golden conversations 3/3 (`proof/bedrock-eval.txt`).
+
+## Alexa+ listing, privacy and terms
+
+* `addon-package/addon.json`: draft add-on manifest using only the documented fields;
+  regenerate for a deployment with `python scripts/make_addon.py --base-url https://<host>`.
+* `addon-package/assets/`: original icon (six sizes) and carousel image, served at
+  `/addon-assets/`; re-export with `scripts/render_assets.sh`.
+* `/privacy` and `/terms` are served by the MCP server from [docs/privacy.md](docs/privacy.md)
+  and [docs/terms.md](docs/terms.md) (set `PRIVACY_CONTACT`).
+* What's documented vs. still open: [docs/ALEXA-READINESS.md](docs/ALEXA-READINESS.md).
+
 ## Run locally
 
 ```bash
@@ -152,6 +179,10 @@ scripts/bench.py       latency benchmark;  scripts/bedrock_smoke.py  Bedrock smo
 scripts/eval_bedrock.py  golden conversations x N on Bedrock models, pass rate + latency
 docs/demo-script.md    golden demo conversations
 docs/ALEXA-READINESS.md  Alexa+ requirements -> code and tests
+docs/privacy.md, terms.md  served at /privacy and /terms
+skills/portable-memory/  Agent Skill (SKILL.md + references/)
+addon-package/         draft addon.json and listing assets
+public_pages.py        /privacy, /terms, /addon-assets/
 proof/                 latency, Inspector and Bedrock evidence
 tests/                 pytest suite
 FRICTION_LOG.md        hackathon friction log

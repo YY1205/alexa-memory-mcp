@@ -5,6 +5,12 @@ How this server meets each Alexa+ MCP requirement we know of, and where the proo
 a captured run in `proof/`. Requirements come from the Alexa+ track materials as recorded
 in `CLAUDE.md` ("Alexa+ constraints and plan").
 
+Sources (public Alexa+ developer docs, read Oct 16, 2026):
+[MCP quickstart](https://developer.amazon.com/docs/alexaplus/add-ons/mcp-toolkit-quickstart.html),
+[account linking](https://developer.amazon.com/docs/alexaplus/add-ons/mcp-toolkit-account-linking),
+[client lifecycle](https://developer.amazon.com/docs/alexaplus/add-ons/mcp-toolkit-client-lifecycle.html),
+[Alexa AI CLI reference](https://developer.amazon.com/docs/alexaplus/add-ons/alexa-ai-cli-reference).
+
 Real Alexa+ (Alexa AI CLI, MCP Toolkit, devices) is partner-gated for hackathon
 participants, so nothing here has been tried against Alexa itself. The web simulator
 (`simulator/`) links and calls the server the same way: a pre-registered OAuth client,
@@ -38,6 +44,9 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 | Scopes enforced per tool | Pass | `memory.read`: recall, list_due_reviews, memory resource; `memory.write`: propose, supersede, confirm, resolve_review | Tests `test_read_only_token_cannot_write`, `test_write_only_token_cannot_read` |
 | Tokens and secrets never stored or logged in the clear | Pass | Only SHA-256 hashes on disk (`.oauth/tokens.json`, 0600, gitignored); owner passphrase only as scrypt hash | Test `test_tokens_survive_a_restart` (no token text on disk, mode 0600) |
 | Owner sign-in protected | Pass | Rate limit (5 wrong / 15 min per client, 30 / hour total), CSRF nonce, no framing, no referrer | Tests `test_wrong_passphrase_is_refused_and_rate_limited`, `test_sign_in_page_cannot_be_framed`, `test_owner_can_deny` |
+| 401 body shape | Pass | `_json_error`: `error`, `message` (as in the docs' example) and `error_description` | Test `test_unauthenticated_mcp_gets_401_without_www_authenticate` |
+| `resource` matches the manifest URL with or without a trailing slash | Pass | `_same_resource` | Test `test_resource_with_trailing_slash_and_refresh_without_resource` |
+| Refresh requests without `resource`; a refresh token with every token response | Pass | `token` (refresh grant) | Same test; `test_refresh_rotates_and_old_refresh_token_is_rejected` |
 | HTTPS and real auth when public | Pass | `AuthSettings.from_env` refuses a public host without OAuth, with an `http://` resource URI, or with the dev token | Test `test_public_host_requires_oauth_and_https` |
 
 ## Known deviations and assumptions
@@ -45,12 +54,53 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 * The token endpoint's `401 invalid_client` also has no `WWW-Authenticate: Basic` header,
   although RFC 6749 asks for one when the client used Basic auth. We omit it everywhere to
   stay on the safe side of the Alexa+ rule; confirm with the Alexa+ team.
-* Alexa's account-linking redirect URIs must be added to `OAUTH_REDIRECT_URIS` when the
-  skill/add-on is created (the exact URIs come from the Alexa developer console).
+* Alexa's account-linking redirect URIs must be added to `OAUTH_REDIRECT_URIS`; the docs say
+  the Developer Hub and `alexa-ai configure-account-linking` show the full list (not public).
+* The docs don't say whether Alexa authenticates at the token endpoint with HTTP Basic or
+  in the body (their sample shows only `client_id`); we accept both.
+* Alexa caches the auth metadata at deploy time: re-deploy (`alexa-ai deploy`) after changing
+  OAuth settings or tools.
 * Single owner per deployment; one registered client (Alexa). The simulator registers as
   that client in demos.
 * `MCP_BEARER_TOKEN` exists only for localhost development and tests; the server refuses
   to start with it on a public host.
+
+## Listing artifacts
+
+| Item | Status | Where |
+|---|---|---|
+| `addon.json` | Draft (documented fields only; placeholder host) | `addon-package/addon.json`, generated and checked by `scripts/make_addon.py`; Tests `tests/test_addon.py` |
+| Icons: light set 72, 64, 88, 126, 180, 241 px (required) | Done (original artwork) | `addon-package/assets/icon-*.png` from `icon.svg` (`scripts/render_assets.sh`), served at `/addon-assets/` |
+| Carousel image 600x900 with alt text (required) | Done | `addon-package/assets/carousel-600x900.png` |
+| Dark icons, banner 1200x600 (optional) | Not provided | |
+| Privacy policy URL | Done | `/privacy` from `docs/privacy.md`; Test `tests/test_public_pages.py` |
+| Terms of use URL | Done | `/terms` from `docs/terms.md` |
+| Agent Skill for assistants using the server | Done | `skills/portable-memory/` (agentskills.io format); loaded by the simulator |
+
+### addon.json: draft
+
+Every key path in `addon.json` appears in the quickstart's example
+(`manifestVersion`, `storeListing.distributionCountries`, `storeListing.locales.en-US.{default,
+name.value, name.spokenForm, shortDescription, fullDescription, examplePhrases,
+privacyAndCompliance.privacyPolicyUrl/termsOfUseUrl, mediaAssets.icons.light/dark,
+mediaAssets.carouselImages, mediaAssets.bannerImages}`, `integrations[].type = "MCP"`,
+`integrations[].config.endpoints.default.{type = "HTTPS", uri}`), and the limits we check
+come from the same page. Open questions, to settle with `alexa-ai new mcp` once we have
+partner access:
+
+1. **Host**: `https://portable-memory.example.com` is a placeholder; run
+   `python scripts/make_addon.py --base-url https://<deployed host>`.
+2. **`accountLinking.enabled`**: the account-linking doc says `alexa-ai new` writes it into
+   the manifest, but no example shows where. We left it out rather than guess.
+3. **`size` format**: the example uses strings; we assume `"72x72"`-style values.
+4. **`storeListing.locales.en-US.default`**: copied as `"DEFAULT"` from the example; its
+   meaning isn't explained.
+5. **`name.spokenForm`**: present in the example (IPA); whether it's required, and whether
+   our IPA is accepted, is not documented.
+6. **Media hosting**: the docs require HTTPS URIs for media; we serve them from our own
+   server (`/addon-assets/`). Whether Amazon copies them at deploy or hot-links is not said.
+7. **Other generated files**: the CLI also creates `package.json` and `.gitignore` in the
+   project root; their contents are not documented.
 
 ## What remains for a real Alexa+ listing
 
@@ -58,9 +108,7 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 |---|---|
 | Deployment with HTTPS (AWS App Runner), `MCP_RESOURCE_URI=https://…/mcp`, `ALLOWED_HOSTS` | Planned Oct 20 |
 | Persist `.oauth/tokens.json` across deploys (volume or secret-backed store) | To do with deployment |
-| `addon.json` (Alexa+ add-on manifest) and the Agent Skill description | Planned Oct 19 |
-| Icons (small and large) for the listing | To do |
-| Privacy policy URL and terms of use URL | To do |
-| Register Alexa's redirect URIs and client credentials from the developer console | Needs partner access |
+| Regenerate `addon.json` with the deployed host; `alexa-ai deploy` / `submit` | Needs partner access |
+| Set `PRIVACY_CONTACT` (shown on /privacy and /terms) | To do before publishing |
+| Register Alexa's redirect URIs and client credentials (`alexa-ai configure-account-linking`) | Needs partner access |
 | End-to-end test with real Alexa+ (account linking and tool calls) | Blocked: Alexa AI CLI / MCP Toolkit / devices are partner-gated |
-| Real Google Drive backend in the demo | Done: `scripts/drive_smoke.py`, `proof/drive-smoke.txt` |
