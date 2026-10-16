@@ -14,7 +14,7 @@ Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (
 | Problem | What this server does |
 |---|---|
 | Speech recognition mishears; assistants over-infer | **No silent writes.** `propose_memory` returns a sentence to read back; only `confirm_memory` saves. |
-| Facts change ("the contractor moved to the 27th") | `supersede_memory` replaces a fact and keeps the old one as history. New proposals surface *possibly related* memories so Alexa can ask "does this replace…?" |
+| Facts change ("the contractor moved to the 27th") | `propose_memory` spots that a new fact updates an existing one and asks once ("This looks like an update to … Should I change it to …?"); one yes saves the new fact and keeps the old one as history. Repeated or abandoned proposals don't pile up. |
 | Temporary facts go stale | Records can carry a review date. `recall` flags stale ones; `list_due_reviews` + `resolve_review` let Alexa ask "is this still true?" |
 | Trust | Every record says whether the user confirmed it and when it last changed. |
 
@@ -23,9 +23,9 @@ Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (
 | Tool | Purpose |
 |---|---|
 | `recall(query, category?)` | Current memories relevant to a question (keyword search, served from memory) |
-| `propose_memory(fact, category, review_in_days?)` | Stage a new fact; returns `confirmation_prompt` and `possibly_related` |
-| `supersede_memory(old_memory_id, new_fact)` | Stage a correction |
-| `confirm_memory(pending_id, confirmed)` | Save or discard a staged fact |
+| `propose_memory(fact, category, review_in_days?)` | Stage a new fact; returns a speakable `confirmation_prompt`, and `replaces` when it looks like an update to an existing memory |
+| `supersede_memory(old_memory_id, new_fact)` | Stage an explicit correction of a memory whose id is known |
+| `confirm_memory(pending_id, confirmed, replaces?)` | Save or discard a staged fact; with `replaces`, one yes saves the update and keeps the old fact as history |
 | `list_due_reviews()` | Temporary facts whose review date has passed |
 | `resolve_review(memory_id, still_true, review_in_days?)` | Keep or retire a stale fact |
 

@@ -4,8 +4,10 @@ The golden conversations for the demo video (< 3 minutes). All data is the ficti
 persona "Sam" from `demo_data/seed.py`. Its dates are relative to the day it runs (Reset demo
 re-seeds), so the demo looks the same on any day: the job interview is always 3 days overdue
 for review, the kitchen contractor starts in 6 days, and the half marathon is 4 weeks out.
-`ScriptedBrain` handles exactly these lines, so the demo also runs offline (`SIM_BRAIN=scripted`); with Bedrock the wording of replies varies,
-but the tool calls and memory-file changes should match.
+`ScriptedBrain` handles exactly these lines, so the demo also runs offline
+(`SIM_BRAIN=scripted`). The server writes every read-back question itself, already in the
+second person, so with Bedrock those questions are identical; other replies may be worded
+differently, but the tool calls and memory-file changes should match.
 
 Tests: `tests/test_simulator.py` runs all five end to end against a real server.
 
@@ -51,14 +53,15 @@ through the MCP resource after every turn).
 | Speaker | Line |
 |---|---|
 | You | The kitchen contractor now starts on the 27th. |
-| Alexa | I have a note that you are renovating the kitchen and the contractor starts on *<6 days from today, e.g. October 28>*. Does this replace it? |
+| Alexa | This looks like an update to your note that you are renovating the kitchen and the contractor starts on *<6 days from today, e.g. October 28>*. Should I change it to: your kitchen contractor now starts on the 27th? |
 | You | Yes. |
 | Alexa | Got it, I've updated that. |
 
-- Turn 1: `propose_memory` returns `possibly_related` with MEM-0006, so Alexa asks instead of
-  storing a contradiction.
-- Turn 2: `confirm_memory {"confirmed": false}` (drop the plain proposal) → `supersede_memory
-  {"old_memory_id": "MEM-0006", ...}` → `confirm_memory {"confirmed": true}`.
+- Turn 1: `propose_memory` notices that the new fact is about the same thing as MEM-0006 and
+  returns `replaces: "MEM-0006"` with a confirmation_prompt that asks about the change
+  once, instead of storing a contradiction.
+- Turn 2: one yes → `confirm_memory {"confirmed": true, "replaces": "MEM-0006"}` saves the
+  new fact and retires the old one in a single call.
 - Memory file: MEM-0006 becomes **historical** (struck through, "replaced by …"); the new
   record is active and says "replaces MEM-0006". History is kept, not deleted.
 
