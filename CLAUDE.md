@@ -48,10 +48,12 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 - No logos or trademarks on the page; call it "Simulated Alexa+".
 - Plan (2026):
   * Oct 14: server latency (cache, write-behind, Bedrock out of the server). Done.
-  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain". Done. Bedrock works
-    with `us.amazon.nova-2-lite-v1:0` in us-east-1 (conversations 1, 2, 5 OK; 3 and 4 need
-    work). Anthropic models need the account's use-case form; Nova Premier is end of life.
-    AWS credentials come from `aws login` (needs `boto3[crt]`).
+  * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain". Done. Demo model:
+    `us.amazon.nova-pro-v1:0` (us-east-1); Nova Pro and Nova 2 Lite both pass the five
+    golden conversations 3/3 (`proof/bedrock-eval.txt`). Updates are confirmed with one yes
+    (`propose_memory` returns `replaces`; `confirm_memory(..., replaces=)`). Anthropic
+    models need the account's use-case form; Nova Premier is end of life. AWS credentials
+    come from `aws login` (needs `boto3[crt]`; the session expires, re-run `aws login`).
   * Oct 17-18: OAuth 2.1 account linking.
   * Oct 19: real Google Drive, Agent Skill, addon.json.
   * Oct 20: deploy. Oct 21: polish/docs. Oct 22: video + submit.
@@ -87,6 +89,9 @@ python3 -m venv .venv
 # demo: memory server :8000 + Simulated Alexa+ :8001 on a temp copy of the demo data
 SIM_BRAIN=scripted scripts/run_demo.sh                       # offline
 BEDROCK_MODEL_ID=... AWS_REGION=... scripts/run_demo.sh      # Bedrock brain
+
+# Bedrock evaluation (manual, costs money): 5 golden conversations x3 -> proof/bedrock-eval.txt
+AWS_REGION=us-east-1 .venv/bin/python scripts/eval_bedrock.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN" us.amazon.nova-pro-v1:0
 
 # Bedrock smoke check (manual, costs money): conversations 1-2 -> proof/bedrock-smoke.txt
 .venv/bin/python scripts/bedrock_smoke.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN"

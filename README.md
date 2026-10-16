@@ -44,7 +44,7 @@ against the 500 ms budget, and *Your memory file* rendered live from the MCP res
 ```bash
 SIM_BRAIN=scripted scripts/run_demo.sh      # offline, deterministic demo brain
 # or with Amazon Bedrock as the "Alexa brain" (default AWS credential chain):
-BEDROCK_MODEL_ID=us.amazon.nova-2-lite-v1:0 AWS_REGION=us-east-1 scripts/run_demo.sh
+BEDROCK_MODEL_ID=us.amazon.nova-pro-v1:0 AWS_REGION=us-east-1 scripts/run_demo.sh
 ```
 
 Then open http://127.0.0.1:8001 in Chrome. The golden conversations are in
@@ -93,7 +93,9 @@ See `.env.example`.
     `toolUse` the model returns is executed on the MCP server and fed back as `toolResult`.
   - Config: `SIM_BRAIN=bedrock` (default), `BEDROCK_MODEL_ID`, `AWS_REGION`; credentials
     from the default AWS credential chain (never read or stored by the app).
-  - Tested model: Amazon Nova 2 Lite (`us.amazon.nova-2-lite-v1:0`, us-east-1).
+  - Demo model: Amazon Nova Pro (`us.amazon.nova-pro-v1:0`, us-east-1). Nova Pro and Nova 2
+    Lite both pass all five golden conversations 3/3 (`scripts/eval_bedrock.py` →
+    `proof/bedrock-eval.txt`); Nova Pro reads the server's questions exactly.
   - Manual check: `scripts/bedrock_smoke.py` → `proof/bedrock-smoke.txt`.
 * The MCP server itself never calls Bedrock (keeps tool calls < 500 ms; enforced by
   `tests/test_latency.py::test_server_never_imports_boto3`).
@@ -116,6 +118,7 @@ simulator/mcp_link.py  official MCP client wrapper, MCP schema -> Bedrock toolSp
 simulator/static/      the web page (plain HTML/CSS/JS)
 scripts/run_demo.sh    start server + simulator on a temp copy of the demo data
 scripts/bench.py       latency benchmark;  scripts/bedrock_smoke.py  Bedrock smoke check
+scripts/eval_bedrock.py  golden conversations x N on Bedrock models, pass rate + latency
 docs/demo-script.md    golden demo conversations
 proof/                 latency, Inspector and Bedrock evidence
 tests/                 pytest suite
