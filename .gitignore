@@ -4,3 +4,4 @@ __pycache__/
 *.tmp
 service-account*.json
 .venv/
+.oauth/

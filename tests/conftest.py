@@ -14,10 +14,17 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from auth.passphrase import hash_passphrase  # noqa: E402
 from demo_data.seed import build_records  # noqa: E402
 from memory.schema import to_markdown  # noqa: E402
 
-TOKEN = "test-token"
+TOKEN = "test-token"  # localhost-only dev token (MCP_BEARER_TOKEN)
+# OAuth test client and owner (fictional; the passphrase exists only in tests)
+CLIENT_ID, CLIENT_SECRET = "test-client", "test-client-secret"
+SIM_REDIRECT = "http://testserver/oauth/callback"   # the simulator under TestClient
+OTHER_REDIRECT = "http://127.0.0.1:9/callback"
+PASSPHRASE = "correct horse battery staple"
+PASSPHRASE_HASH = hash_passphrase(PASSPHRASE)
 # Every test sees the same "today" (also pinned in the server subprocess via DEMO_TODAY).
 TEST_TODAY = date(2026, 10, 22)
 TEST_RECORDS = build_records(TEST_TODAY)
@@ -31,14 +38,22 @@ def free_port():
     return port
 
 
+def oauth_env(workdir: Path, port: int) -> dict:
+    return {"OAUTH_CLIENT_ID": CLIENT_ID, "OAUTH_CLIENT_SECRET": CLIENT_SECRET,
+            "OAUTH_REDIRECT_URIS": f"{SIM_REDIRECT},{OTHER_REDIRECT}",
+            "OWNER_PASSPHRASE_HASH": PASSPHRASE_HASH, "OAUTH_TOKEN_STORE": str(workdir / "tokens.json"),
+            "MCP_RESOURCE_URI": f"http://127.0.0.1:{port}/mcp"}
+
+
 @contextmanager
-def running_server(workdir: Path):
-    """python server.py on a fresh copy of the demo data; yields the base URL."""
+def running_server(workdir: Path, extra_env: dict | None = None):
+    """python server.py (OAuth on) on a fresh copy of the demo data; yields the base URL."""
     mem = workdir / "memories.md"
     mem.write_text(to_markdown(TEST_RECORDS))
     port = free_port()
     env = {**os.environ, "PORT": str(port), "LOCAL_MEMORY_PATH": str(mem), "MCP_BEARER_TOKEN": TOKEN,
-           "DEMO_ADMIN": "1", "DEMO_TODAY": TEST_TODAY.isoformat()}
+           "DEMO_ADMIN": "1", "DEMO_TODAY": TEST_TODAY.isoformat(), **oauth_env(workdir, port),
+           **(extra_env or {})}
     proc = subprocess.Popen([sys.executable, "server.py"], cwd=ROOT, env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     url = f"http://127.0.0.1:{port}"

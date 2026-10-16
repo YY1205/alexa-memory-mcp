@@ -6,7 +6,6 @@ Configuration: see .env.example
 """
 from __future__ import annotations
 
-import hmac
 import logging
 import os
 from datetime import date
@@ -14,8 +13,10 @@ from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from starlette.routing import Route
+
+from auth.oauth import READ, WRITE, AuthSettings, OAuthServer, ScopeError, require_scope
 
 from memory.cache import CachedStore
 from memory.service import MemoryError_, MemoryService
@@ -25,6 +26,7 @@ from retrieval.retrievers import KeywordRetriever
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 HERE = Path(__file__).parent
 MEMORY_URI = "memory://memories.md"
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 INSTRUCTIONS = """\
 This server is the user's own long-term memory. The user owns it; it is stored
@@ -68,13 +70,18 @@ def build_service() -> MemoryService:
     return MemoryService(store, KeywordRetriever(), today=today)
 
 
-def build_server(service: MemoryService) -> MCPServer:
+def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MCPServer:
     mcp = MCPServer(name="portable-memory", title="Portable Memory", instructions=INSTRUCTIONS,
                     version="0.1.0")
 
-    def safe(fn, *args, **kwargs) -> dict:
+    def safe(scope: str, fn, *args, **kwargs) -> dict:
         try:
+            require_scope(scope)  # memory.read / memory.write from the access token
             return fn(*args, **kwargs)
+        except ScopeError:
+            message = ("This app can read your memory but isn't allowed to change it. "
+                       "Link your account again with permission to save.")
+            return {"error": f"insufficient_scope: {scope} required", "spoken_answer": message}
         except MemoryError_ as e:
             return {"error": str(e), "spoken_answer": str(e)}
 
@@ -85,7 +92,7 @@ def build_server(service: MemoryService) -> MCPServer:
         about...", "when is my..."). Returns current memories only; phrase the spoken
         answer from them. category is optional: profile, preference, active_context,
         project, decision, other."""
-        return safe(service.recall, query, category)
+        return safe(READ, service.recall, query, category)
 
     @mcp.tool()
     def propose_memory(fact: str, category: str = "other", review_in_days: int | None = None) -> dict:
@@ -97,7 +104,7 @@ def build_server(service: MemoryService) -> MCPServer:
         user's dentist appointment is on Friday."). Set review_in_days for temporary
         facts (plans, deadlines, ongoing situations) so they get re-checked later.
         Proposing the same fact again replaces the earlier unconfirmed proposal."""
-        return safe(service.propose, fact, category, review_in_days)
+        return safe(WRITE, service.propose, fact, category, review_in_days)
 
     @mcp.tool()
     def supersede_memory(old_memory_id: str, new_fact: str) -> dict:
@@ -105,7 +112,7 @@ def build_server(service: MemoryService) -> MCPServer:
         user corrects it. The old memory is kept as history, not deleted. Does NOT
         save yet: read confirmation_prompt to the user, then call confirm_memory. For
         new facts that might update an old one, use propose_memory instead."""
-        return safe(service.propose, new_fact, supersedes=old_memory_id)
+        return safe(WRITE, service.propose, new_fact, supersedes=old_memory_id)
 
     @mcp.tool()
     def confirm_memory(pending_id: str, confirmed: bool, replaces: str | None = None) -> dict:
@@ -113,32 +120,40 @@ def build_server(service: MemoryService) -> MCPServer:
         confirmed=true saves it, false discards it. replaces: the id from
         propose_memory's `replaces` when the user agreed to the update; the old
         memory is then kept as history."""
-        return safe(service.confirm, pending_id, confirmed, replaces)
+        return safe(WRITE, service.confirm, pending_id, confirmed, replaces)
 
     @mcp.tool()
     def list_due_reviews() -> dict:
         """List temporary memories whose review date has passed, so you can ask the
         user whether each one is still true."""
-        return safe(service.list_due_reviews)
+        return safe(READ, service.list_due_reviews)
 
     @mcp.tool()
     def resolve_review(memory_id: str, still_true: bool, review_in_days: int | None = None) -> dict:
         """Record the user's answer to "is this still true?". still_true=false retires
         the memory (kept as history). Optionally schedule the next check."""
-        return safe(service.resolve_review, memory_id, still_true, review_in_days)
+        return safe(WRITE, service.resolve_review, memory_id, still_true, review_in_days)
 
     @mcp.resource(MEMORY_URI, name="memories.md", title="Your memory file",
                   description="The user's canonical memory file (Markdown), as stored.",
                   mime_type="text/markdown")
     def memory_file() -> str:
+        require_scope(READ)
         return service.export_markdown()
 
     if os.getenv("DEMO_ADMIN") == "1":
-        # Local demo helper: restore the fictional persona. Off by default; when the
-        # server has MCP_BEARER_TOKEN, this route requires it like /mcp does.
+        # Demo helper: restore the fictional persona. Off by default. Callers from this
+        # machine (local server) may use it freely; anyone else needs an access token
+        # with memory.write.
         @mcp.custom_route("/admin/reset", methods=["POST"], include_in_schema=False)
         async def reset_demo(request):
             from demo_data.seed import build_records
+
+            local = (os.getenv("HOST", "127.0.0.1") in LOCAL_HOSTS
+                     and request.client is not None and request.client.host in LOCAL_HOSTS)
+            scopes = oauth.check_bearer(request.headers.get("authorization")) if oauth else None
+            if not local and not (scopes and WRITE in scopes):
+                return JSONResponse({"error": "invalid_token"}, status_code=401)
 
             records = build_records(today())  # review dates relative to today
             if hasattr(service.store, "reset"):
@@ -150,23 +165,6 @@ def build_server(service: MemoryService) -> MCPServer:
     return mcp
 
 
-class BearerTokenMiddleware(BaseHTTPMiddleware):
-    """Minimal protection for a public endpoint holding personal data.
-    Replace with OAuth if the Alexa+ integration requires it."""
-
-    def __init__(self, app, token: str):
-        super().__init__(app)
-        self.expected = f"Bearer {token}"
-
-    async def dispatch(self, request, call_next):
-        if request.url.path == "/healthz":
-            return JSONResponse({"ok": True})
-        given = request.headers.get("authorization", "")
-        if not hmac.compare_digest(given, self.expected):
-            return JSONResponse({"error": "unauthorized"}, status_code=401)
-        return await call_next(request)
-
-
 def build_app(service: MemoryService | None = None):
     host = os.getenv("HOST", "127.0.0.1")
     security = None
@@ -174,13 +172,13 @@ def build_app(service: MemoryService | None = None):
         hosts = [h.strip() for h in allowed.split(",") if h.strip()]
         security = TransportSecuritySettings(
             allowed_hosts=hosts, allowed_origins=[f"https://{h}" for h in hosts])
-    app = build_server(service or build_service()).streamable_http_app(
+    # OAuth 2.1 (see auth/oauth.py). MCP_BEARER_TOKEN is a localhost-only dev token.
+    oauth = OAuthServer(AuthSettings.from_env(host, int(os.getenv("PORT", "8000")), HERE))
+    app = build_server(service or build_service(), oauth).streamable_http_app(
         stateless_http=True, json_response=True, host=host, transport_security=security)
-    if token := os.getenv("MCP_BEARER_TOKEN"):
-        app.add_middleware(BearerTokenMiddleware, token=token)
-    elif host not in ("127.0.0.1", "localhost"):
-        raise SystemExit("Refusing to listen publicly without MCP_BEARER_TOKEN set.")
-    return app
+    app.router.routes.extend(oauth.routes())
+    app.router.routes.append(Route("/healthz", lambda request: JSONResponse({"ok": True})))
+    return oauth.middleware(app)
 
 
 if __name__ == "__main__":

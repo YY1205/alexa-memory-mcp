@@ -184,8 +184,8 @@ def test_full_voice_flow_over_http(http_server):
     assert "parks on level 3 at work" in memory_file.text  # resource reflects the write
 
 
-def test_admin_reset_requires_token_and_restores_demo_data(http_server):
-    assert httpx.post(f"{http_server}/admin/reset").status_code == 401
+def test_admin_reset_restores_demo_data(http_server):
+    """From this machine the reset needs no token (other hosts: see test_oauth.py)."""
     auth = {"Authorization": "Bearer test-token"}
     import anyio
     from mcp import Client
@@ -199,7 +199,7 @@ def test_admin_reset_requires_token_and_restores_demo_data(http_server):
 
     anyio.run(call, "resolve_review", {"memory_id": "MEM-0007", "still_true": False})
     assert anyio.run(call, "list_due_reviews", {})["count"] == 0
-    r = httpx.post(f"{http_server}/admin/reset", headers=auth)
+    r = httpx.post(f"{http_server}/admin/reset")
     assert r.status_code == 200 and r.json()["records"] == len(RECORDS)
     assert anyio.run(call, "list_due_reviews", {})["count"] == 1
 
