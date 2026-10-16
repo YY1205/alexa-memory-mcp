@@ -16,7 +16,7 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 |---|---|---|---|
 | Streamable HTTP transport | Pass | `server.py`, `build_app` (`streamable_http_app`, `/mcp`) | Test `tests/test_memory.py::test_full_voice_flow_over_http`; Proof `proof/inspector-tools-list-oauth.txt` (MCP Inspector over Streamable HTTP) |
 | MCP spec 2025-11-25 or later | Pass | `requirements.txt` (`mcp>=2.3,<3`) | Test `test_full_voice_flow_over_http` (negotiates 2026-07-28 ≥ 2025-11-25); Test `tests/test_oauth.py::test_client_asking_for_2025_11_25_gets_it` |
-| Round-trip tool latency < 500 ms | Pass (local) | `memory/cache.py` (reads from memory, Drive write-behind); no LLM in the server | Test `tests/test_latency.py` (p95 < 500 ms per tool and the memory resource, with OAuth on and a 1 s storage save); Proof `proof/latency-local.txt` (p95 ≤ 1.7 ms) |
+| Round-trip tool latency < 500 ms | Pass (local) | `memory/cache.py` (reads from memory, Drive write-behind); no LLM in the server | Test `tests/test_latency.py` (p95 < 500 ms per tool and the memory resource, with OAuth on and a 1 s storage save); Proof `proof/latency-local.txt` (p95 ≤ 1.7 ms); with real Google Drive `proof/latency-drive.txt` (p95 ≤ 2.2 ms while 14 uploads ran) |
 | Standard MCP results; Alexa+ does NLU and response generation | Pass | `server.py` tools return plain JSON; read-back sentences are written for speech (`memory/speech.py`) | Test `tests/test_latency.py::test_server_never_imports_boto3` (no model in the request path) |
 
 ## Authentication checklist
@@ -63,4 +63,4 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 | Privacy policy URL and terms of use URL | To do |
 | Register Alexa's redirect URIs and client credentials from the developer console | Needs partner access |
 | End-to-end test with real Alexa+ (account linking and tool calls) | Blocked: Alexa AI CLI / MCP Toolkit / devices are partner-gated |
-| Real Google Drive backend in the demo | Planned Oct 19 |
+| Real Google Drive backend in the demo | Done: `scripts/drive_smoke.py`, `proof/drive-smoke.txt` |

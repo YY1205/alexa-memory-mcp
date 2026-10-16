@@ -48,6 +48,10 @@ against the 500 ms budget, and *Your memory file* rendered live from the MCP res
 
 ```bash
 SIM_BRAIN=scripted scripts/run_demo.sh      # offline, deterministic demo brain
+# memory in your Google Drive demo folder instead of a local temp file:
+MEMORY_BACKEND=drive DRIVE_FOLDER_ID=<folder id> \
+  GOOGLE_APPLICATION_CREDENTIALS=~/.config/alexa-memory-mcp/service-account.json \
+  SIM_BRAIN=scripted scripts/run_demo.sh
 # or with Amazon Bedrock as the "Alexa brain" (default AWS credential chain):
 BEDROCK_MODEL_ID=us.amazon.nova-pro-v1:0 AWS_REGION=us-east-1 scripts/run_demo.sh
 ```
@@ -74,10 +78,18 @@ Inspect it with the MCP Inspector: `npx @modelcontextprotocol/inspector`, connec
 
 See `.env.example`.
 
-* **Google Drive backend** (`MEMORY_BACKEND=drive`): create a service account, create a
-  *demo* folder in Drive, share only that folder with the service account e-mail, and set
-  `DRIVE_FOLDER_ID` and `GOOGLE_APPLICATION_CREDENTIALS`. The server reads and writes
-  `memories.md` in that folder.
+* **Google Drive backend** (`MEMORY_BACKEND=drive`): create a service account (enable the
+  Drive API in its project), create a *demo* folder in Drive, share only that folder with
+  the service account's e-mail as Editor, **upload `memories.md` yourself** (for example
+  `demo_data/memories.md`), and set `DRIVE_FOLDER_ID` and `GOOGLE_APPLICATION_CREDENTIALS`
+  (path to the key; keep it outside the repo). A service account can't own files in a
+  personal Drive, so the server never creates the file: it fails at startup if it's missing,
+  and only updates its content. Writes go out in the background (2 s debounce, at most 10 s);
+  every `MEMORY_REFRESH_SECONDS` (default 30, demo 5) it checks Drive's file `version` and
+  downloads only when the file changed, so hand edits show up without any tool call waiting
+  on Drive. The simulator links to the file ("Open in Google Drive").
+  Real-Drive checks: `scripts/drive_smoke.py` → `proof/drive-smoke.txt`; latency with Drive:
+  `proof/latency-drive.txt`.
 * **No LLM in the request path.** Alexa+ does the language understanding and phrases the
   answer, so the server only does fast keyword retrieval over an in-memory cache. This
   keeps every tool call under the Alexa+ 500 ms budget.
@@ -134,7 +146,8 @@ simulator/agent.py     Converse tool-use loop, per-session history, Alexa system
 simulator/brains.py    BedrockBrain (Converse) and ScriptedBrain (offline demo)
 simulator/mcp_link.py  official MCP client wrapper, MCP schema -> Bedrock toolSpec
 simulator/static/      the web page (plain HTML/CSS/JS)
-scripts/run_demo.sh    start server + simulator on a temp copy of the demo data
+scripts/run_demo.sh    start server + simulator (local temp copy of the demo data, or Drive)
+scripts/drive_smoke.py  real Google Drive checks (write-behind, outside edit, conflict merge)
 scripts/bench.py       latency benchmark;  scripts/bedrock_smoke.py  Bedrock smoke check
 scripts/eval_bedrock.py  golden conversations x N on Bedrock models, pass rate + latency
 docs/demo-script.md    golden demo conversations

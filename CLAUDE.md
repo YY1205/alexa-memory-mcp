@@ -69,7 +69,15 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
     models need the account's use-case form; Nova Premier is end of life. AWS credentials
     come from `aws login` (needs `boto3[crt]`; the session expires, re-run `aws login`).
   * Oct 17-18: OAuth 2.1 account linking. Done (early, Oct 16).
-  * Oct 19: real Google Drive, Agent Skill, addon.json.
+  * Oct 19: real Google Drive (done early, Oct 16), Agent Skill, addon.json.
+- Google Drive (`MEMORY_BACKEND=drive`): demo folder only, shared with the service account
+  as Editor; key path in `GOOGLE_APPLICATION_CREDENTIALS`, outside the repo: never print,
+  copy or commit it, and keep e-mails out of proofs. `DriveStore` never creates
+  `memories.md` (service accounts can't own files in a personal Drive) and fails at
+  startup if it's missing. The cache uses Drive's file `version` to skip downloads; no
+  tool call may wait on Drive (`tests/test_drive.py` uses a fake client;
+  `scripts/drive_smoke.py` is the manual real-Drive check). Demo reset overwrites the
+  Drive file only when explicitly triggered.
   * Oct 20: deploy. Oct 21: polish/docs. Oct 22: video + submit.
 
 ## Working rules
@@ -110,6 +118,9 @@ TOKEN=$(.venv/bin/python scripts/oauth_token.py http://127.0.0.1:8000/mcp --redi
 # click "Link account" and use the owner passphrase the script prints
 SIM_BRAIN=scripted scripts/run_demo.sh                       # offline
 BEDROCK_MODEL_ID=... AWS_REGION=... scripts/run_demo.sh      # Bedrock brain
+
+# real Google Drive checks (manual; resets the demo file to the seed at the end)
+DRIVE_FOLDER_ID=... GOOGLE_APPLICATION_CREDENTIALS=... .venv/bin/python scripts/drive_smoke.py
 
 # Bedrock evaluation (manual, costs money): 5 golden conversations x3 -> proof/bedrock-eval.txt
 AWS_REGION=us-east-1 .venv/bin/python scripts/eval_bedrock.py http://127.0.0.1:8000/mcp --token "$TOKEN" us.amazon.nova-pro-v1:0
