@@ -11,7 +11,7 @@ import re
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 import httpx
 from mcp import Client
@@ -37,21 +37,35 @@ class ToolCall:
     mcp_latency_ms: float
 
 
+class NotLinked(Exception):
+    """No access token: the user has to link their account first."""
+
+
 class McpLink:
-    def __init__(self, url: str, token: str | None = None):
+    """`token` is a fixed bearer token (scripts, localhost dev); `token_provider` is an
+    async callable returning the current OAuth access token (the simulator)."""
+
+    def __init__(self, url: str, token: str | None = None,
+                 token_provider: Callable[[], Awaitable[str | None]] | None = None):
         self.url = url
         self.token = token
+        self.token_provider = token_provider
 
     @property
     def base_url(self) -> str:
         return self.url.rsplit("/mcp", 1)[0]
 
-    def _headers(self) -> dict[str, str] | None:
-        return {"Authorization": f"Bearer {self.token}"} if self.token else None
+    async def _headers(self, required: bool = True) -> dict[str, str] | None:
+        token = await self.token_provider() if self.token_provider else self.token
+        if not token:
+            if required and self.token_provider:
+                raise NotLinked()
+            return None
+        return {"Authorization": f"Bearer {token}"}
 
     @asynccontextmanager
     async def connect(self):
-        async with create_mcp_http_client(headers=self._headers()) as http:
+        async with create_mcp_http_client(headers=await self._headers()) as http:
             async with Client(streamable_http_client(self.url, http_client=http)) as client:
                 yield client
 
@@ -86,7 +100,7 @@ class McpLink:
 
     async def reset_demo(self) -> dict:
         async with httpx.AsyncClient(timeout=10) as http:
-            r = await http.post(f"{self.base_url}/admin/reset", headers=self._headers())
+            r = await http.post(f"{self.base_url}/admin/reset", headers=await self._headers(required=False))
         if r.status_code == 404:
             raise RuntimeError("The memory server has no demo reset (start it with DEMO_ADMIN=1).")
         r.raise_for_status()

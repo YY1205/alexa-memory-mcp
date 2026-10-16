@@ -9,6 +9,7 @@ const els = {
   form: $("ask-form"), input: $("text-input"), mic: $("mic-btn"), mute: $("mute-btn"), hint: $("hint"),
   trace: $("trace"), memory: $("memory"), memoryRaw: $("memory-raw"), memMeta: $("mem-meta"),
   brainChip: $("brain-chip"), serverChip: $("server-chip"), reset: $("reset-btn"), clock: $("clock"),
+  linkChip: $("link-chip"), linkBtn: $("link-btn"), unlinkBtn: $("unlink-btn"),
 };
 
 let sessionId = newSessionId();
@@ -237,6 +238,12 @@ async function loadMemory(highlight) {
   const { ok, data } = await api("/api/memory");
   if (!ok) {
     els.memMeta.textContent = data.error || "memory file unavailable";
+    if (data.linked === false) {
+      lastMemory = null;
+      els.memoryRaw.textContent = "";
+      els.memory.replaceChildren(el("p", { class: "empty" },
+        "Link your account to let this assistant read your memory file."));
+    }
     return;
   }
   els.memMeta.textContent = `memory://memories.md · read over MCP in ${fmtMs(data.mcp_latency_ms)}`;
@@ -299,8 +306,25 @@ async function loadStatus() {
   els.brainChip.textContent = brain;
   els.brainChip.className = "chip " + (data.brain_error ? "bad" : "ok");
   els.brainChip.title = data.brain_error || "The model that plays Alexa";
-  if (data.server) {
+  const account = data.account || {};
+  els.linkBtn.hidden = !!account.linked || !account.configured;
+  els.unlinkBtn.hidden = !account.linked;
+  if (account.linked) {
+    const canWrite = (account.scopes || []).includes("memory.write");
+    els.linkChip.textContent = canWrite ? "account: linked" : "account: linked (read only)";
+    els.linkChip.className = "chip ok";
+    els.linkChip.title = `Scopes: ${(account.scopes || []).join(", ")}. Tokens stay in the simulator, never in this page.`;
+  } else {
+    els.linkChip.textContent = account.configured ? "account: not linked" : "account: linking not configured";
+    els.linkChip.className = "chip bad";
+    els.linkChip.title = account.configured ? "Link your account to use your memory." : "Set OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET.";
+  }
+  if (data.server && data.server.tools) {
     els.serverChip.textContent = `server: ${data.server.name} · ${data.server.tools.length} tools`;
+    els.serverChip.className = "chip ok";
+    els.serverChip.title = data.server_url;
+  } else if (data.server) {
+    els.serverChip.textContent = "server: reachable";
     els.serverChip.className = "chip ok";
     els.serverChip.title = data.server_url;
   } else {
@@ -356,5 +380,24 @@ renderMute();
 setupRecognition();
 tickClock();
 setInterval(tickClock, 15000);
+async function unlinkAccount() {
+  const token = store("session", "sim-admin-token");
+  const res = await api("/api/unlink", { method: "POST", headers: token ? { "X-Admin-Token": token } : {} });
+  if (!res.ok) { hint(res.data.error || "Unlink failed."); return; }
+  sessionId = newSessionId();
+  bubble("system", "Account unlinked. Link it again to use your memory.");
+  await loadStatus();
+  await loadMemory(false);
+}
+els.unlinkBtn.addEventListener("click", unlinkAccount);
+
+// Coming back from the server's sign-in page: say how linking went, then tidy the URL.
+(function linkResult() {
+  const params = new URLSearchParams(location.search);
+  if (params.has("linked")) bubble("system", "Account linked. Try: “When is my sister's birthday?”");
+  if (params.has("link_error")) bubble("error", params.get("link_error"));
+  if (params.has("linked") || params.has("link_error")) history.replaceState(null, "", "/");
+})();
+
 loadStatus();
 loadMemory(false);

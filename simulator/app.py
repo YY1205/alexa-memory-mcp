@@ -2,7 +2,10 @@
 
 Run:  python -m simulator.app        then open http://127.0.0.1:8001
 Env:  MCP_SERVER_URL   memory server endpoint (default http://127.0.0.1:8000/mcp)
-      MCP_BEARER_TOKEN bearer token of the memory server
+      OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET  this simulator's client registration on the
+                       memory server ("Link account" runs auth code + PKCE, like Alexa)
+      SIM_PUBLIC_URL   where the browser reaches the simulator (default http://127.0.0.1:8001);
+                       the OAuth redirect URI is SIM_PUBLIC_URL/oauth/callback
       SIM_BRAIN        bedrock (default) | scripted
       BEDROCK_MODEL_ID, AWS_REGION   for SIM_BRAIN=bedrock (default AWS credential chain)
       SIM_ADMIN_TOKEN  if set, "Reset demo" requires it (X-Admin-Token header);
@@ -13,19 +16,24 @@ from __future__ import annotations
 
 import hmac
 import logging
+from urllib.parse import urlencode
 import os
 from contextlib import asynccontextmanager
+
+import anyio
 from pathlib import Path
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from .agent import Agent, _unwrap
 from .brains import BedrockBrain, Brain, BrainError, ScriptedBrain, UnavailableBrain
-from .mcp_link import McpLink
+from .linking import AccountLink
+from .mcp_link import McpLink, NotLinked
+from auth.client import OAuthError
 
 log = logging.getLogger("simulator")
 STATIC = Path(__file__).parent / "static"
@@ -45,20 +53,34 @@ def build_brain(kind: str | None = None) -> Brain:
         return UnavailableBrain("bedrock", str(e), model_id or None)
 
 
-def build_app(link: McpLink | None = None, brain: Brain | None = None,
-              admin_token: str | None = None) -> Starlette:
-    link = link or McpLink(os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8000/mcp"),
-                           os.getenv("MCP_BEARER_TOKEN"))
+def build_account(mcp_url: str) -> AccountLink:
+    public = os.getenv("SIM_PUBLIC_URL", f"http://127.0.0.1:{os.getenv('SIM_PORT', '8001')}").rstrip("/")
+    return AccountLink(mcp_url, os.getenv("OAUTH_CLIENT_ID"), os.getenv("OAUTH_CLIENT_SECRET"),
+                       f"{public}/oauth/callback")
+
+
+def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_token: str | None = None,
+              account: AccountLink | None = None) -> Starlette:
+    mcp_url = mcp_url or os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8000/mcp")
+    account = account or build_account(mcp_url)
+    link = McpLink(mcp_url, token_provider=account.access_token)
     agent = Agent(link, brain or build_brain())
     admin_token = admin_token if admin_token is not None else os.getenv("SIM_ADMIN_TOKEN")
     state: dict = {"server": None, "server_error": None}
 
     async def discover() -> None:
+        """Server reachable (OAuth metadata) and, once linked, its tools."""
         try:
-            async with link.connect() as client:
-                profile = await link.profile(client)
-            state.update(server={"name": profile.name, "tools": [t.name for t in profile.tools],
-                                 "has_instructions": bool(profile.instructions)}, server_error=None)
+            await anyio.to_thread.run_sync(account.endpoints)
+            server = {"reachable": True}
+            if account.linked:
+                async with link.connect() as client:
+                    profile = await link.profile(client)
+                server.update(name=profile.name, tools=[t.name for t in profile.tools],
+                              has_instructions=bool(profile.instructions))
+            state.update(server=server, server_error=None)
+        except NotLinked:
+            state.update(server={"reachable": True}, server_error=None)
         except Exception as e:
             err = _unwrap(e)
             state.update(server=None, server_error=f"{type(err).__name__}: {err}")
@@ -73,7 +95,7 @@ def build_app(link: McpLink | None = None, brain: Brain | None = None,
         return FileResponse(STATIC / "index.html")
 
     async def status(request: Request):
-        if state["server"] is None:
+        if state["server"] is None or (account.linked and "tools" not in state["server"]):
             await discover()
         b = agent.brain
         return JSONResponse({
@@ -81,6 +103,7 @@ def build_app(link: McpLink | None = None, brain: Brain | None = None,
             "brain_error": getattr(b, "reason", None),
             "server_url": link.url, "server": state["server"], "server_error": state["server_error"],
             "reset_needs_token": bool(admin_token),
+            "account": account.status(),
         })
 
     async def utterance(request: Request):
@@ -96,6 +119,9 @@ def build_app(link: McpLink | None = None, brain: Brain | None = None,
             markdown, latency = await link.read_memory()
         except Exception as e:
             err = _unwrap(e)
+            if isinstance(err, NotLinked):
+                return JSONResponse({"error": "Link your account to see your memory file.", "linked": False},
+                                    status_code=401)
             return JSONResponse({"error": f"Can't read the memory file over MCP: {type(err).__name__}"},
                                 status_code=502)
         return JSONResponse({"markdown": markdown, "mcp_latency_ms": latency})
@@ -117,7 +143,35 @@ def build_app(link: McpLink | None = None, brain: Brain | None = None,
         agent.forget(body.get("session_id"))
         return JSONResponse(result)
 
+    async def link_start(request: Request):
+        try:
+            url = await anyio.to_thread.run_sync(account.start)
+        except Exception as e:  # discovery or config problem: show it in the UI
+            return RedirectResponse("/?" + urlencode({"link_error": str(e)}), status_code=303)
+        return RedirectResponse(url, status_code=303)
+
+    async def link_callback(request: Request):
+        try:
+            await anyio.to_thread.run_sync(account.finish, dict(request.query_params))
+        except OAuthError as e:
+            message = "Linking was cancelled." if e.error == "access_denied" else f"Linking failed: {e}"
+            return RedirectResponse("/?" + urlencode({"link_error": message}), status_code=303)
+        state["server"] = None  # re-discover tools with the new token
+        agent.forget()
+        return RedirectResponse("/?linked=1", status_code=303)
+
+    async def unlink(request: Request):
+        if not reset_allowed(request):
+            return JSONResponse({"error": "Unlinking needs the admin token."}, status_code=403)
+        account.unlink()
+        agent.forget()
+        state["server"] = None
+        return JSONResponse({"linked": False})
+
     return Starlette(lifespan=lifespan, routes=[
+        Route("/oauth/start", link_start),
+        Route("/oauth/callback", link_callback),
+        Route("/api/unlink", unlink, methods=["POST"]),
         Route("/", index),
         Route("/api/status", status),
         Route("/api/utterance", utterance, methods=["POST"]),

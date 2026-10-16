@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import anyio
 
 from .brains import Brain, BrainError
-from .mcp_link import McpLink, ServerProfile, to_bedrock_tool_config
+from .mcp_link import McpLink, NotLinked, ServerProfile, to_bedrock_tool_config
 
 log = logging.getLogger(__name__)
 # Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it.
@@ -127,6 +127,9 @@ class Agent:
         except Exception as exc:
             del session.messages[history_len:]  # keep the history a valid conversation
             err = _unwrap(exc)
+            if isinstance(err, NotLinked):
+                return {"reply_text": "Your memory isn't linked yet. Use Link account to connect it.",
+                        "trace": trace, "model_latency_ms": round(model_ms, 1), "error": "unlinked"}
             if isinstance(err, BrainError):
                 return {"reply_text": str(err), "trace": trace, "model_latency_ms": round(model_ms, 1),
                         "error": "brain"}

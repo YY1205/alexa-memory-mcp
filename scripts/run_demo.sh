@@ -7,6 +7,10 @@
 #
 # Bedrock needs BEDROCK_MODEL_ID, AWS_REGION and AWS credentials in the default
 # credential chain (e.g. AWS_PROFILE). This script never reads them.
+#
+# Account linking: open the simulator, click "Link account", and sign in on the
+# memory server's page with the owner passphrase printed below (set OWNER_PASSPHRASE
+# to choose your own, e.g. for a recording). The server only gets its scrypt hash.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -17,8 +21,14 @@ SIM_PORT="${SIM_PORT:-8001}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/alexa-memory-demo.XXXXXX")"
 "$PY" demo_data/seed.py "$WORK/memories.md" >/dev/null  # dates relative to today
 
-# A throwaway token for this run only; both processes get it via the environment.
-export MCP_BEARER_TOKEN="${MCP_BEARER_TOKEN:-$("$PY" -c 'import secrets; print(secrets.token_urlsafe(32))')}"
+# OAuth for this run: the simulator is the one registered client (like Alexa).
+RANDOM_SECRET() { "$PY" -c 'import secrets; print(secrets.token_urlsafe(32))'; }
+PASSPHRASE="${OWNER_PASSPHRASE:-$("$PY" -c 'import secrets; print("-".join(secrets.token_hex(2) for _ in range(4)))')}"
+export OAUTH_CLIENT_ID="simulated-alexa"
+export OAUTH_CLIENT_SECRET="$(RANDOM_SECRET)"
+export OAUTH_REDIRECT_URIS="http://127.0.0.1:$SIM_PORT/oauth/callback"
+OWNER_HASH="$(PASSPHRASE="$PASSPHRASE" "$PY" -c 'import os; from auth.passphrase import hash_passphrase; print(hash_passphrase(os.environ["PASSPHRASE"]))')"
+unset OWNER_PASSPHRASE MCP_BEARER_TOKEN
 
 PIDS=()
 cleanup() {
@@ -29,6 +39,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 LOCAL_MEMORY_PATH="$WORK/memories.md" DEMO_ADMIN=1 HOST=127.0.0.1 PORT="$SERVER_PORT" \
+  OWNER_PASSPHRASE_HASH="$OWNER_HASH" OAUTH_TOKEN_STORE="$WORK/tokens.json" \
   "$PY" server.py &
 PIDS+=($!)
 
@@ -38,12 +49,13 @@ for _ in $(seq 50); do
 done
 
 MCP_SERVER_URL="http://127.0.0.1:$SERVER_PORT/mcp" SIM_HOST=127.0.0.1 SIM_PORT="$SIM_PORT" \
-  "$PY" -m simulator.app &
+  SIM_PUBLIC_URL="http://127.0.0.1:$SIM_PORT" "$PY" -m simulator.app &
 PIDS+=($!)
 
 echo
 echo "  Memory server:      http://127.0.0.1:$SERVER_PORT/mcp   (data: $WORK/memories.md)"
 echo "  Simulated Alexa+:   http://127.0.0.1:$SIM_PORT          (brain: ${SIM_BRAIN:-bedrock})"
+echo "  Owner passphrase:   $PASSPHRASE   (click Link account, then sign in with it)"
 echo "  Ctrl+C to stop."
 echo
 wait

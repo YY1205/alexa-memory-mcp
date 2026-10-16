@@ -3,6 +3,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+import httpx
 import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
 from mcp.types import Tool
@@ -14,17 +15,42 @@ sys.path.insert(0, str(ROOT))
 from memory.schema import from_markdown  # noqa: E402
 from simulator.app import build_app  # noqa: E402
 from simulator.brains import BedrockBrain, BrainError, ScriptedBrain, UnavailableBrain  # noqa: E402
-from simulator.mcp_link import McpLink, to_bedrock_tool  # noqa: E402
+from simulator.linking import AccountLink  # noqa: E402
+from simulator.mcp_link import to_bedrock_tool  # noqa: E402
+from auth import client as oc  # noqa: E402
 from demo_data.seed import spoken_date  # noqa: E402
-from tests.conftest import TEST_TODAY, TOKEN  # noqa: E402
+from tests.conftest import CLIENT_ID, CLIENT_SECRET, PASSPHRASE, SIM_REDIRECT, TEST_TODAY  # noqa: E402
 
 ADMIN = {"X-Admin-Token": "admin-test"}
 
 
+def make_sim(server_url, brain=None):
+    account = AccountLink(f"{server_url}/mcp", CLIENT_ID, CLIENT_SECRET, SIM_REDIRECT)
+    app = build_app(f"{server_url}/mcp", brain or ScriptedBrain(), admin_token="admin-test", account=account)
+    return app, account
+
+
+def link(sim, scopes=None, approve=True):
+    """Click "Link account", sign in as the owner on the server's page, follow the callback."""
+    start = sim.get("/oauth/start", follow_redirects=False)
+    assert start.status_code == 303
+    authorize_url = start.headers["location"]
+    with httpx.Client(follow_redirects=False) as browser:
+        if approve:
+            params = oc.owner_approves(browser, authorize_url, PASSPHRASE, scopes)
+        else:
+            page = browser.get(authorize_url)
+            nonce = page.text.split('name="nonce" value="')[1].split('"')[0]
+            r = browser.post(authorize_url.split("?")[0], data={"nonce": nonce, "action": "deny"})
+            params = dict(httpx.URL(r.headers["location"]).params)
+    return sim.get("/oauth/callback", params=params, follow_redirects=False)
+
+
 @pytest.fixture(scope="module")
 def sim(module_server):
-    app = build_app(McpLink(f"{module_server}/mcp", TOKEN), ScriptedBrain(), admin_token="admin-test")
+    app, _ = make_sim(module_server)
     with TestClient(app) as client:
+        assert link(client).headers["location"] == "/?linked=1"
         yield client
 
 
@@ -157,13 +183,78 @@ def test_empty_utterance_is_rejected(sim):
 
 
 def test_brain_error_is_reported_and_history_stays_valid(module_server):
-    app = build_app(McpLink(f"{module_server}/mcp", TOKEN),
-                    UnavailableBrain("bedrock", "No AWS credentials found."), admin_token="admin-test")
+    app, _ = make_sim(module_server, UnavailableBrain("bedrock", "No AWS credentials found."))
     with TestClient(app) as client:
+        link(client)
         out = client.post("/api/utterance", json={"session_id": "s", "text": "Hi?"}).json()
         assert out["error"] == "brain" and out["reply_text"] == "No AWS credentials found."
         status = client.get("/api/status").json()
         assert status["brain_error"] == "No AWS credentials found."
+
+
+# ---------- account linking (like Alexa) ----------
+
+def test_unlinked_simulator_asks_to_link_and_tokens_never_reach_the_browser(module_server):
+    app, account = make_sim(module_server)
+    with TestClient(app) as client:
+        status = client.get("/api/status").json()
+        assert status["account"] == {"linked": False, "configured": True}
+        assert status["server"] == {"reachable": True}
+        out = client.post("/api/utterance", json={"session_id": "s", "text": "When is my sister's birthday?"}).json()
+        assert out["error"] == "unlinked" and "Link account" in out["reply_text"]
+        assert client.get("/api/memory").status_code == 401
+
+        r = link(client)
+        assert r.headers["location"] == "/?linked=1"
+        status = client.get("/api/status").json()
+        assert status["account"]["linked"] and status["account"]["scopes"] == ["memory.read", "memory.write"]
+        assert len(status["server"]["tools"]) == 6
+        out = client.post("/api/utterance", json={"session_id": "s", "text": "When is my sister's birthday?"})
+        memory_page = client.get("/api/memory")
+        for response in (client.get("/api/status"), out, memory_page, r):
+            assert account._tokens.access_token not in response.text
+            assert account._tokens.refresh_token not in response.text
+            assert "pm_at_" not in response.text and "pm_rt_" not in response.text
+        assert "November 2" in out.json()["reply_text"]
+
+        assert client.post("/api/unlink", headers=ADMIN).json() == {"linked": False}
+        assert client.get("/api/memory").status_code == 401
+
+
+def test_denied_link_stays_unlinked(module_server):
+    app, account = make_sim(module_server)
+    with TestClient(app) as client:
+        r = link(client, approve=False)
+        assert "link_error=Linking+was+cancelled" in r.headers["location"]
+        assert not account.linked
+
+
+def test_forged_callback_is_rejected(module_server):
+    app, account = make_sim(module_server)
+    with TestClient(app) as client:
+        r = client.get("/oauth/callback", params={"code": "x", "state": "never-issued"}, follow_redirects=False)
+        assert "link_error=" in r.headers["location"] and not account.linked
+
+
+def test_access_token_refreshes_automatically(module_server):
+    app, account = make_sim(module_server)
+    with TestClient(app) as client:
+        link(client)
+        old = account._tokens
+        account._tokens = oc.Tokens(old.access_token, old.refresh_token, 0, old.scope)  # pretend it expired
+        out = client.post("/api/utterance", json={"session_id": "s", "text": "When is my sister's birthday?"}).json()
+        assert "November 2" in out["reply_text"]
+        assert account._tokens.refresh_token != old.refresh_token  # rotated
+        assert account._tokens.access_token != old.access_token
+
+
+def test_read_only_link_cannot_save(module_server):
+    app, _ = make_sim(module_server)
+    with TestClient(app) as client:
+        link(client, scopes=["memory.read"])
+        out = client.post("/api/utterance", json={"session_id": "s",
+                                                  "text": "Remember that I hate jazz."}).json()
+        assert "insufficient_scope" in str(out["trace"][0]["result"])
 
 
 def test_model_reasoning_is_never_spoken():
