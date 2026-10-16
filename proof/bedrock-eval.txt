@@ -1,0 +1,248 @@
+# 2026-10-16T03:36:04+00:00 | golden conversations x3 | region us-east-1 | server http://127.0.0.1:8010/mcp
+SUMMARY
+us.amazon.nova-2-lite-v1:0                   15/15 pass  [#1 3/3  #2 3/3  #3 3/3  #4 3/3  #5 3/3]  model latency per turn: median 1322 ms, max 2254 ms
+us.amazon.nova-pro-v1:0                      15/15 pass  [#1 3/3  #2 3/3  #3 3/3  #4 3/3  #5 3/3]  model latency per turn: median 1516 ms, max 2307 ms
+
+################ us.amazon.nova-2-lite-v1:0
+--- run 1, conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister Maya's birthday is on November 2.
+     tools: recall | model 1328 ms
+  RESULT: PASS
+--- run 1, conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is Friday at 3?
+     tools: propose_memory | model 1555 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1317 ms
+  RESULT: PASS
+--- run 1, conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: The kitchen contractor now starts on the 27th. This updates your previous note that said October 21. Should I change it?
+     tools: propose_memory | model 1252 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that. The kitchen contractor now starts on the 27th.
+     tools: confirm_memory | model 1292 ms
+  RESULT: PASS
+--- run 1, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: You have one memory that needs review: you are waiting to hear back about a job interview at a design studio. Would you like to update this or mark it as still true?
+     tools: list_due_reviews | model 1190 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you start a new job at a design studio in November?
+     tools: resolve_review, propose_memory | model 2254 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that you start a new job at a design studio in November. Is there anything else you need to update?
+     tools: confirm_memory | model 1417 ms
+  RESULT: PASS
+--- run 1, conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | model 1402 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | model 1128 ms
+  RESULT: PASS
+--- run 2, conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister's birthday is on November 2.
+     tools: recall | model 1083 ms
+  RESULT: PASS
+--- run 2, conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is Friday at 3?
+     tools: propose_memory | model 1091 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1178 ms
+  RESULT: PASS
+--- run 2, conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: The kitchen contractor now starts on the 27th. Should I change your previous note about the start date to this new date?
+     tools: propose_memory | model 1437 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that. The kitchen contractor now starts on the 27th.
+     tools: confirm_memory | model 1315 ms
+  RESULT: PASS
+--- run 2, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have one memory that needs updating: you're waiting to hear back about a job interview at a design studio. Would you like to confirm if this is still true, update it, or mark it as no longer needed?
+     tools: list_due_reviews | model 1267 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you start a new job at a design studio in November?
+     tools: resolve_review, propose_memory | model 2181 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that. Is there anything else you'd like me to remember or update for you?
+     tools: confirm_memory | model 1540 ms
+  RESULT: PASS
+--- run 2, conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | model 1464 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | model 1417 ms
+  RESULT: PASS
+--- run 3, conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister Maya's birthday is on November 2.
+     tools: recall | model 1147 ms
+  RESULT: PASS
+--- run 3, conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3?
+     tools: propose_memory | model 2064 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1107 ms
+  RESULT: PASS
+--- run 3, conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: The kitchen contractor now starts on the 27th. Should I change your previous note that said they start on October 21?
+     tools: propose_memory | model 1430 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that. The kitchen contractor starts on the 27th.
+     tools: confirm_memory | model 1115 ms
+  RESULT: PASS
+--- run 3, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: Your memory about the job interview at the design studio is due for review. Would you still like to keep this as active, or has there been any update?
+     tools: list_due_reviews | model 1566 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you start a job at a design studio in November?
+     tools: resolve_review, propose_memory | model 2003 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that. Your new job starts in November and I've updated your memory accordingly.
+     tools: confirm_memory | model 1330 ms
+  RESULT: PASS
+--- run 3, conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | model 1200 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | model 1240 ms
+  RESULT: PASS
+
+################ us.amazon.nova-pro-v1:0
+--- run 1, conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister Maya's birthday is on November 2.
+     tools: recall | model 1712 ms
+  RESULT: PASS
+--- run 1, conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3?
+     tools: propose_memory | model 1504 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1416 ms
+  RESULT: PASS
+--- run 1, conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 21. Should I change it to: your kitchen contractor starts on the 27th?
+     tools: propose_memory | model 1661 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory | model 1771 ms
+  RESULT: PASS
+--- run 1, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: Thanks, I'll keep that.
+     tools: list_due_reviews, resolve_review | model 2066 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I change your note that you are waiting to hear back about a job interview at a design studio to: you got the job at a design studio and will start in November?
+     tools: supersede_memory | model 1718 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory | model 1472 ms
+  RESULT: PASS
+--- run 1, conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | model 1308 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | model 1340 ms
+  RESULT: PASS
+--- run 2, conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister Maya's birthday is on November 2.
+     tools: recall | model 1492 ms
+  RESULT: PASS
+--- run 2, conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3?
+     tools: propose_memory | model 1559 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1665 ms
+  RESULT: PASS
+--- run 2, conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 21. Should I change it to: your kitchen contractor now starts on the 27th?
+     tools: propose_memory | model 1716 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory | model 1408 ms
+  RESULT: PASS
+--- run 2, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: Thanks, I'll keep that. No further updates are needed at this time.
+     tools: list_due_reviews, resolve_review | model 2213 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I change your note that you are waiting to hear back about a job interview at a design studio to: you got the job and starts in November?
+     tools: supersede_memory | model 1718 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory | model 1626 ms
+  RESULT: PASS
+--- run 2, conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | model 1505 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | model 1348 ms
+  RESULT: PASS
+--- run 3, conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister Maya's birthday is on November 2.
+     tools: recall | model 1263 ms
+  RESULT: PASS
+--- run 3, conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3?
+     tools: propose_memory | model 1605 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1315 ms
+  RESULT: PASS
+--- run 3, conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 21. Should I change it to: your kitchen contractor now starts on the 27th?
+     tools: propose_memory | model 2307 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory | model 1434 ms
+  RESULT: PASS
+--- run 3, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: Is the fact that you are waiting to hear back about a job interview at a design studio still true?
+     tools: list_due_reviews | model 1527 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got the job at a design studio and will start in November?
+     tools: resolve_review, propose_memory | model 1777 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | model 1442 ms
+  RESULT: PASS
+--- run 3, conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | model 1400 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | model 1377 ms
+  RESULT: PASS
