@@ -167,6 +167,7 @@ def test_full_voice_flow_over_http(http_server):
         http = create_mcp_http_client(headers={"Authorization": "Bearer test-token"})
         from mcp.client.streamable_http import streamable_http_client
         async with Client(streamable_http_client(f"{http_server}/mcp", http_client=http)) as c:
+            assert c.protocol_version >= "2025-11-25"  # Alexa+ requires 2025-11-25 or later
             tools = {t.name for t in (await c.list_tools()).tools}
             assert tools == {"recall", "propose_memory", "supersede_memory", "confirm_memory",
                              "list_due_reviews", "resolve_review"}

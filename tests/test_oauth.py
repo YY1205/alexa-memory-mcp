@@ -98,6 +98,17 @@ def test_authorization_server_metadata_has_required_fields(client):
     assert "registration_endpoint" not in body  # no dynamic client registration
 
 
+def test_client_asking_for_2025_11_25_gets_it(client):
+    """Alexa+ speaks MCP 2025-11-25; the server must agree to exactly that version."""
+    ep, verifier, params = start_link(client)
+    tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
+    r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {tokens.access_token}"}, json={
+        "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-11-25", "capabilities": {},
+            "clientInfo": {"name": "alexa-like-client", "version": "1"}}})
+    assert r.json()["result"]["protocolVersion"] == "2025-11-25"
+
+
 # ---------------------------------------------------------------- happy path
 
 def test_full_happy_path(client):

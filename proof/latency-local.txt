@@ -1,12 +1,13 @@
-# 2026-10-14T23:26:42Z | macOS 26.5 arm64 | Python 3.14.6 | mcp 2.3.0
-# server: python server.py (MEMORY_BACKEND=local, bearer token on), client on the same machine
-$ python scripts/bench.py http://127.0.0.1:8765/mcp --token *** -n 50
-Round-trip latency per tool call, http://127.0.0.1:8765/mcp, n=50 iterations
-tool               calls    p50 ms    p95 ms    max ms  p95<500ms
-recall                50       1.1       1.3       1.4  PASS
-list_due_reviews      50       1.1       1.2       1.3  PASS
-propose_memory        50       1.8       2.1       2.4  PASS
-confirm_memory       100       1.7       2.0       2.2  PASS
-supersede_memory      50       1.8       2.0       2.0  PASS
-resolve_review        50       1.7       1.9       2.1  PASS
+# 2026-10-16T04:34:40Z | macOS 26.5 arm64 | Python 3.14.6 | mcp 2.3.0
+# server: python server.py (MEMORY_BACKEND=local), OAuth 2.1 on, OAuth-issued access token; client on the same machine
+$ python scripts/bench.py http://127.0.0.1:8000/mcp --token *** -n 50
+Round-trip latency per tool call, http://127.0.0.1:8000/mcp, n=50 iterations
+tool / resource    calls    p50 ms    p95 ms    max ms  p95<500ms
+recall                50       0.9       1.0       1.1  PASS
+list_due_reviews      50       0.9       1.0       1.0  PASS
+propose_memory        50       1.5       1.7       1.8  PASS
+confirm_memory       100       1.4       1.6       1.7  PASS
+supersede_memory      50       1.4       1.7       1.7  PASS
+resolve_review        50       1.4       1.6       1.7  PASS
+read memories.md      50       0.9       1.0       1.5  PASS
 # exit code: 0
