@@ -4,11 +4,12 @@ Not part of the test suite (it costs money and needs AWS). Start the servers fir
 (scripts/run_demo.sh, or server.py with DEMO_ADMIN=1), then:
 
     BEDROCK_MODEL_ID=... AWS_REGION=... python scripts/bedrock_smoke.py \\
-        http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN" --out proof/bedrock-smoke.txt
+        http://127.0.0.1:8000/mcp --token "$TOKEN" --out proof/bedrock-smoke.txt
 
 AWS credentials come from the default credential chain; this script never reads
 or prints them. The output contains the model id, region, replies, tool calls
 and latencies only.
+Get TOKEN with scripts/oauth_token.py (real OAuth flow).
 """
 from __future__ import annotations
 

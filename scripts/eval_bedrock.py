@@ -3,7 +3,7 @@
 Manual (costs money, needs AWS). Start a memory server with DEMO_ADMIN=1 first, then:
 
     AWS_REGION=us-east-1 python scripts/eval_bedrock.py http://127.0.0.1:8000/mcp \\
-        --token "$MCP_BEARER_TOKEN" --repeats 3 --out proof/bedrock-eval.txt \\
+        --token "$TOKEN" --repeats 3 --out proof/bedrock-eval.txt \\
         us.amazon.nova-2-lite-v1:0 us.amazon.nova-pro-v1:0
 
 Each conversation starts from freshly reset demo data. Pass/fail is judged from the
@@ -14,6 +14,7 @@ memory file (read over MCP) and the replies, not from exact wording:
   4 review      MEM-0007 retired; an active fact about the new job; nothing pending
   5 decline     no jazz fact anywhere; nothing pending
   every turn    no ids or "the user" read aloud, no brain/MCP errors
+Get TOKEN with scripts/oauth_token.py (real OAuth flow).
 """
 from __future__ import annotations
 

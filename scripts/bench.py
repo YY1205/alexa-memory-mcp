@@ -2,13 +2,14 @@
 
 Starts nothing itself: point it at a running server.
 
-    python scripts/bench.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN" -n 50
+    python scripts/bench.py http://127.0.0.1:8000/mcp --token "$TOKEN" -n 50
 
 Each iteration calls all six tools with the official MCP Python client:
 recall, list_due_reviews, propose_memory + confirm_memory (creates a benchmark
 fact), supersede_memory + confirm_memory (discarded), resolve_review (retires the
 benchmark fact), and reads the memory file resource (memory://memories.md). It WRITES to the memory file, leaving one historical
 "Benchmark fact" record per iteration: run it against demo data only.
+Get TOKEN with scripts/oauth_token.py (real OAuth flow).
 """
 from __future__ import annotations
 
@@ -82,7 +83,7 @@ def report(timings: dict[str, list[float]], budget_ms: float) -> tuple[str, bool
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("url", help="server MCP endpoint, e.g. http://127.0.0.1:8000/mcp")
-    ap.add_argument("--token", help="bearer token (MCP_BEARER_TOKEN of the server)")
+    ap.add_argument("--token", help="access token (scripts/oauth_token.py) or the localhost dev token")
     ap.add_argument("-n", type=int, default=50, help="iterations per tool (default 50)")
     ap.add_argument("--budget-ms", type=float, default=500, help="p95 budget (default 500, Alexa+)")
     args = ap.parse_args()

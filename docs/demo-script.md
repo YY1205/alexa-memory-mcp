@@ -17,7 +17,10 @@ Tests: `tests/test_simulator.py` runs all five end to end against a real server.
 SIM_BRAIN=scripted scripts/run_demo.sh     # or: BEDROCK_MODEL_ID=... AWS_REGION=... scripts/run_demo.sh
 ```
 
-Open http://127.0.0.1:8001 in Chrome. Click **Reset demo** before recording. Mic: click the
+Open http://127.0.0.1:8001 in Chrome, click **Link account** and sign in on the memory
+server's page with the owner passphrase the script prints (set `OWNER_PASSPHRASE` for a
+recording). Linking can be part of the video: it is the Alexa account-linking step.
+Click **Reset demo** before recording. Mic: click the
 blue button and speak; or type and press Enter.
 
 Show the three areas while talking: the device, **Under the hood** (each MCP call and its
