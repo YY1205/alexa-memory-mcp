@@ -175,6 +175,26 @@ def test_conversation_5_decline(chat, sim):
     assert not any("jazz" in r.fact for r in after.values())
 
 
+def test_conversation_6_hand_edit_is_used(tmp_path):
+    """The user edits memories.md by hand (here: the local file; in the demo: in Google
+    Drive); after the refresh interval Alexa answers with the edit."""
+    from tests.conftest import running_server
+
+    with running_server(tmp_path, {"MEMORY_REFRESH_SECONDS": "0.3"}) as url:
+        app, _ = make_sim(url)
+        with TestClient(app) as client:
+            link(client)
+            path = tmp_path / "memories.md"
+            path.write_text(path.read_text().replace("Biscuit", "Pepper"))  # the hand edit
+            import time
+            time.sleep(1.0)
+            out = client.post("/api/utterance", json={"session_id": "s6",
+                                                      "text": "When does my dog need his heartworm pill?"}).json()
+            assert [s["tool"] for s in out["trace"]] == ["recall"]
+            assert out["reply_text"] == "Your dog Pepper needs his heartworm pill on the first day of each month."
+            assert "Pepper" in client.get("/api/memory").json()["markdown"]
+
+
 def test_reset_needs_admin_token(sim):
     assert sim.post("/api/reset", json={}).status_code == 403
 

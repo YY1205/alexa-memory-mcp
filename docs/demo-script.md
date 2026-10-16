@@ -9,7 +9,7 @@ for review, the kitchen contractor starts in 6 days, and the half marathon is 4 
 second person, so with Bedrock those questions are identical; other replies may be worded
 differently, but the tool calls and memory-file changes should match.
 
-Tests: `tests/test_simulator.py` runs all five end to end against a real server.
+Tests: `tests/test_simulator.py` runs all six end to end against a real server.
 
 ## Setup
 
@@ -97,6 +97,27 @@ through the MCP resource after every turn).
 - Turn 1: `propose_memory` (pending record appears).
 - Turn 2: `confirm_memory {"confirmed": false}`: the pending record disappears. Nothing saved.
 
+## 6. You own the file: edit it by hand (about 25 s)
+
+Run the demo on Google Drive (`MEMORY_BACKEND=drive ... scripts/run_demo.sh`, refresh 5 s).
+
+| Speaker | Line |
+|---|---|
+| (You) | Click **Open in Google Drive** in the memory panel and change the dog's name in `memories.md` from *Biscuit* to *Pepper*; save. |
+| (wait) | About 5 seconds. MEM-0009 in the memory panel flashes "just changed" after the next turn. |
+| You | When does my dog need his heartworm pill? |
+| Alexa | Your dog Pepper needs his heartworm pill on the first day of each month. |
+
+- The server noticed the new Drive file version (a metadata check every 5 s), downloaded the
+  file and answered from it: the memory is the user's own file, not the assistant's.
+- `recall` stays a few milliseconds; Drive is never on the tool-call path.
+- How to edit a `.md` file in Drive: the Drive web page only previews Markdown. Use **Google
+  Drive for desktop** (edit `memories.md` in the synced folder with any text editor; it
+  syncs in seconds), or a Drive-connected text editor (*Open with* in Drive). Practise once
+  before recording, and click **Reset demo** afterwards to restore *Biscuit*.
+- Offline the same thing works with the local file (`tests/test_simulator.py::
+  test_conversation_6_hand_edit_is_used`).
+
 ## Closing shot (about 10 s)
 
 Switch the memory panel to **Markdown**: "This is the user's own file. Any assistant can read
@@ -104,4 +125,5 @@ it; none of them owns it."
 
 ## Timing budget
 
-About 2 min 10 s of conversation plus intro/outro. Keep it under 3 minutes.
+About 2 min 35 s of conversation plus intro/outro. Keep it under 3 minutes: if it runs long,
+drop conversation 5 (decline) or shorten the closing shot.
