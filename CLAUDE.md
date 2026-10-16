@@ -36,7 +36,9 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
     reads come from the in-memory cache (`memory/cache.py`), Drive writes are write-behind.
   * Auth: OAuth 2.1 authorization code + PKCE (S256); unauthenticated requests get
     **401 without a `WWW-Authenticate` header**; Protected Resource Metadata per
-    RFC 9728; AS metadata at `/.well-known/oauth-authorization-server`.
+    RFC 9728; AS metadata at `/.well-known/oauth-authorization-server`. No DCR, CIMD,
+    OIDC or step-up: one pre-registered client. Every item is mapped to code and tests
+    in `docs/ALEXA-READINESS.md`; keep that table true when auth changes.
   * Alexa+ does NLU and response generation itself; the server returns standard MCP
     results (no LLM in the server).
 - Simulator (`simulator/`, port 8001): a real MCP client (official Python client, a
@@ -46,6 +48,18 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
   golden conversations in `docs/demo-script.md`; `tests/test_simulator.py` checks them. If
   you change a golden line, change all three together.
 - No logos or trademarks on the page; call it "Simulated Alexa+".
+- Auth design (`auth/`): custom, not the MCP SDK's built-in auth, because the SDK's
+  `RequireAuthMiddleware` always sends `WWW-Authenticate` on 401, its handlers treat
+  `resource` as optional and its metadata assumes dynamic registration; adapting it meant
+  overriding most of it. `auth/oauth.py` is a minimal single-owner authorization server
+  (owner passphrase as scrypt hash, rate-limited sign-in page) plus the /mcp check;
+  `auth/tokens.py` issues opaque tokens stored only as SHA-256 hashes in a gitignored
+  0600 file (`.oauth/tokens.json`), so they survive restarts; refresh tokens rotate and
+  reuse revokes the family. Scopes reach tools through a contextvar
+  (`require_scope`). Standard library + Starlette only; don't add an OAuth/JWT library
+  without a reason. `MCP_BEARER_TOKEN` is a localhost-only dev token (refused publicly).
+- The simulator links exactly like Alexa (`simulator/linking.py`): it is the registered
+  client, tokens stay server-side in the simulator, never in the browser.
 - Plan (2026):
   * Oct 14: server latency (cache, write-behind, Bedrock out of the server). Done.
   * Oct 15-16: web simulator with Amazon Bedrock as the "Alexa brain". Done. Demo model:
@@ -54,7 +68,7 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
     (`propose_memory` returns `replaces`; `confirm_memory(..., replaces=)`). Anthropic
     models need the account's use-case form; Nova Premier is end of life. AWS credentials
     come from `aws login` (needs `boto3[crt]`; the session expires, re-run `aws login`).
-  * Oct 17-18: OAuth 2.1 account linking.
+  * Oct 17-18: OAuth 2.1 account linking. Done (early, Oct 16).
   * Oct 19: real Google Drive, Agent Skill, addon.json.
   * Oct 20: deploy. Oct 21: polish/docs. Oct 22: video + submit.
 
@@ -83,18 +97,26 @@ python3 -m venv .venv
 # run tests (unit + end-to-end Streamable HTTP test)
 .venv/bin/python -m pytest -q
 
-# latency benchmark against a running server (writes benchmark records: demo data only)
-.venv/bin/python scripts/bench.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN"
+# owner passphrase hash for OWNER_PASSPHRASE_HASH (asks without echo)
+.venv/bin/python -m auth.passphrase
 
-# demo: memory server :8000 + Simulated Alexa+ :8001 on a temp copy of the demo data
+# OAuth access token for dev tools (runs the real flow; needs OAUTH_CLIENT_ID/SECRET, OWNER_PASSPHRASE or prompt)
+TOKEN=$(.venv/bin/python scripts/oauth_token.py http://127.0.0.1:8000/mcp --redirect-uri <registered uri>)
+
+# latency benchmark against a running server (writes benchmark records: demo data only)
+.venv/bin/python scripts/bench.py http://127.0.0.1:8000/mcp --token "$TOKEN"
+
+# demo: memory server :8000 + Simulated Alexa+ :8001 on a temp copy of the demo data;
+# click "Link account" and use the owner passphrase the script prints
 SIM_BRAIN=scripted scripts/run_demo.sh                       # offline
 BEDROCK_MODEL_ID=... AWS_REGION=... scripts/run_demo.sh      # Bedrock brain
 
 # Bedrock evaluation (manual, costs money): 5 golden conversations x3 -> proof/bedrock-eval.txt
-AWS_REGION=us-east-1 .venv/bin/python scripts/eval_bedrock.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN" us.amazon.nova-pro-v1:0
+AWS_REGION=us-east-1 .venv/bin/python scripts/eval_bedrock.py http://127.0.0.1:8000/mcp --token "$TOKEN" us.amazon.nova-pro-v1:0
 
 # Bedrock smoke check (manual, costs money): conversations 1-2 -> proof/bedrock-smoke.txt
-.venv/bin/python scripts/bedrock_smoke.py http://127.0.0.1:8000/mcp --token "$MCP_BEARER_TOKEN"
+.venv/bin/python scripts/bedrock_smoke.py http://127.0.0.1:8000/mcp --token "$TOKEN"
 ```
 
 Never read, print or store AWS credentials; rely on the default credential chain.
+Never log or commit OAuth tokens, client secrets or the owner passphrase; proofs show `***`.

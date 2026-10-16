@@ -31,7 +31,12 @@ Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (
 
 Resource: `memory://memories.md` (`text/markdown`), the canonical memory file as stored.
 
-Transport: Streamable HTTP at `/mcp`, MCP protocol 2025-11-25 (Python SDK `mcp` 2.x).
+Transport: Streamable HTTP at `/mcp`, MCP protocol 2025-11-25 or later (Python SDK `mcp` 2.x).
+
+Auth: OAuth 2.1 account linking built for the Alexa+ checklist: auth code + PKCE (S256) +
+`resource`, one pre-registered client, scopes `memory.read` / `memory.write`, 401 without
+`WWW-Authenticate`, RFC 9728 and RFC 8414 metadata. See
+[docs/ALEXA-READINESS.md](docs/ALEXA-READINESS.md) for every requirement and its proof.
 
 ## Simulated Alexa+ (the judged demo)
 
@@ -47,7 +52,9 @@ SIM_BRAIN=scripted scripts/run_demo.sh      # offline, deterministic demo brain
 BEDROCK_MODEL_ID=us.amazon.nova-pro-v1:0 AWS_REGION=us-east-1 scripts/run_demo.sh
 ```
 
-Then open http://127.0.0.1:8001 in Chrome. The golden conversations are in
+Then open http://127.0.0.1:8001 in Chrome, click **Link account** and sign in on the memory
+server's page with the owner passphrase the script prints (exactly like linking an account in
+the Alexa app; tokens stay in the simulator). The golden conversations are in
 [docs/demo-script.md](docs/demo-script.md).
 
 ## Run locally
@@ -74,13 +81,23 @@ See `.env.example`.
 * **No LLM in the request path.** Alexa+ does the language understanding and phrases the
   answer, so the server only does fast keyword retrieval over an in-memory cache. This
   keeps every tool call under the Alexa+ 500 ms budget.
-* **Public deployment**: set `HOST=0.0.0.0`, `MCP_BEARER_TOKEN` and `ALLOWED_HOSTS`. The
-  server refuses to listen publicly without a token.
+* **OAuth 2.1** (`auth/`): `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, `OAUTH_REDIRECT_URIS`
+  (the client, e.g. Alexa's account-linking redirect URIs), `OWNER_PASSPHRASE_HASH` (create
+  it with `python -m auth.passphrase`; the passphrase itself is never stored),
+  `MCP_RESOURCE_URI` (canonical `https://<host>/mcp`), optional `OAUTH_ISSUER`,
+  `OAUTH_TOKEN_STORE` (default `.oauth/tokens.json`, hashes only), `OAUTH_ACCESS_TTL` (900 s).
+* **Public deployment**: set `HOST=0.0.0.0`, the OAuth variables, an `https://`
+  `MCP_RESOURCE_URI` and `ALLOWED_HOSTS`. The server refuses to listen publicly without
+  OAuth. `MCP_BEARER_TOKEN` is a localhost-only dev token and is refused on a public host.
 * **Demo reset** (`DEMO_ADMIN=1`): enables `POST /admin/reset`, which restores the fictional
-  demo data. Off by default; behind the bearer token when one is set.
-* **Simulator** (`python -m simulator.app`, port 8001): `MCP_SERVER_URL`, `MCP_BEARER_TOKEN`,
+  demo data. Off by default; free from the same machine, otherwise it needs an access token
+  with `memory.write`.
+* **Simulator** (`python -m simulator.app`, port 8001): `MCP_SERVER_URL`, `OAUTH_CLIENT_ID`,
+  `OAUTH_CLIENT_SECRET`, `SIM_PUBLIC_URL` (redirect URI = `SIM_PUBLIC_URL/oauth/callback`),
   `SIM_BRAIN=bedrock|scripted`, `BEDROCK_MODEL_ID`, `AWS_REGION`. On a non-local host it
-  requires `SIM_ADMIN_TOKEN`, which then protects *Reset demo*.
+  requires `SIM_ADMIN_TOKEN`, which then protects *Reset demo* and *Unlink*.
+* **Dev token for tools**: `scripts/oauth_token.py` runs the real OAuth flow headlessly and
+  prints an access token for `scripts/bench.py`, the MCP Inspector or the Bedrock scripts.
 
 ## AWS usage (AWS Builder mini challenge)
 
@@ -104,7 +121,8 @@ See `.env.example`.
 ## Layout
 
 ```
-server.py              MCP server, tool definitions, auth middleware
+server.py              MCP server, tool definitions, per-tool scopes
+auth/                  OAuth 2.1: authorization server, token store, client helpers
 memory/schema.py       record fields + Markdown (de)serialisation
 memory/store.py        local file and Google Drive backends
 memory/cache.py        in-memory cache, Drive write-behind, refresh + merge
@@ -120,6 +138,7 @@ scripts/run_demo.sh    start server + simulator on a temp copy of the demo data
 scripts/bench.py       latency benchmark;  scripts/bedrock_smoke.py  Bedrock smoke check
 scripts/eval_bedrock.py  golden conversations x N on Bedrock models, pass rate + latency
 docs/demo-script.md    golden demo conversations
+docs/ALEXA-READINESS.md  Alexa+ requirements -> code and tests
 proof/                 latency, Inspector and Bedrock evidence
 tests/                 pytest suite
 FRICTION_LOG.md        hackathon friction log
@@ -130,4 +149,5 @@ FRICTION_LOG.md        hackathon friction log
 * Single user per deployment (a `scope` field is reserved for household memory).
 * Keyword retrieval only matches shared words; the client (Alexa+ or the simulator) is
   expected to turn the user's question into good search words.
-* Bearer-token auth is a placeholder until the Alexa+ connection requirements are confirmed.
+* One owner and one OAuth client per deployment. Not yet tried against real Alexa+ account
+  linking (partner-gated); see [docs/ALEXA-READINESS.md](docs/ALEXA-READINESS.md).
