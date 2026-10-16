@@ -67,6 +67,7 @@ class CachedStore:
         # in write-behind mode.
         self.lock = threading.RLock()
         records = backing.load()
+        self._synced_version = self._backing_version()  # e.g. Drive's file version
         self._records = _copy(records)
         self._base = _copy(records)   # what the backing store held at the last sync
         self._dirty = False           # local writes not yet persisted
@@ -117,11 +118,23 @@ class CachedStore:
         """
         with self._io_lock:
             self.backing.save(records)
+            self._synced_version = self._backing_version()
             with self.lock:
                 self._records = _copy(records)
                 self._base = _copy(records)
                 self._generation += 1
                 self._dirty = False
+
+    # ---------- change detection ----------
+    def _backing_version(self) -> str | None:
+        """Version of the content we last read or wrote, if the backing store has one."""
+        return getattr(self.backing, "last_version", None)
+
+    def _remote_unchanged(self) -> bool:
+        """True if the backing store says nothing changed since our last sync. Stores
+        without versions (local file) always return False, i.e. read the file."""
+        current = getattr(self.backing, "version", None)
+        return bool(current and self._synced_version is not None and current() == self._synced_version)
 
     def close(self) -> None:
         self._stop.set()
@@ -159,6 +172,9 @@ class CachedStore:
                 if self._dirty:
                     return
                 generation = self._generation
+            if self._remote_unchanged():  # cheap metadata check (Drive "version")
+                self._last_refresh = time.monotonic()
+                return
             remote = self.backing.load()  # slow for Drive; no cache lock held
             self._last_refresh = time.monotonic()
             with self.lock:
@@ -168,6 +184,7 @@ class CachedStore:
                     log.info("Memory file changed outside the server; reloaded %d records", len(remote))
                 self._records = _copy(remote)
                 self._base = _copy(remote)
+                self._synced_version = self._backing_version()
 
     def _sync(self) -> None:
         """Merge with the backing store and persist the result."""
@@ -178,7 +195,7 @@ class CachedStore:
                 local, base, generation = _copy(self._records), _copy(self._base), self._generation
             # In write-behind mode the cache lock is released here, so tool calls
             # keep running while we talk to the backing store.
-            remote = self.backing.load()
+            remote = base if self._remote_unchanged() else self.backing.load()
             merged = local
             if remote != base:
                 merged, conflicts = three_way_merge(base, local, remote)
@@ -186,14 +203,15 @@ class CachedStore:
                             "merged (local wins on conflict%s)",
                             f": {', '.join(conflicts)}" if conflicts else "")
             self.backing.save(merged)
+            self._synced_version = self._backing_version()
             self._last_refresh = time.monotonic()
             with self.lock:
                 self._base = _copy(merged)
                 if self._generation == generation:
                     self._records = _copy(merged)
                     self._dirty = False
-                elif self._dirty_since:
-                    self._dirty_since = time.monotonic()  # newer writes get a fresh max_wait
                 else:
-                    # Writes arrived during the save: keep them on top of the merge.
+                    # Writes arrived during the save: keep them on top of the merge (which
+                    # may include remote edits), and give them a fresh max_wait.
                     self._records, _ = three_way_merge(local, self._records, merged)
+                    self._dirty_since = time.monotonic()

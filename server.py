@@ -20,7 +20,7 @@ from auth.oauth import READ, WRITE, AuthSettings, OAuthServer, ScopeError, requi
 
 from memory.cache import CachedStore
 from memory.service import MemoryError_, MemoryService
-from memory.store import DriveStore, LocalFileStore
+from memory.store import DriveStore, LocalFileStore, MemoryFileMissing
 from retrieval.retrievers import KeywordRetriever
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
@@ -61,12 +61,18 @@ def today() -> date:
 def build_service() -> MemoryService:
     # Reads come from memory. Drive writes go out in the background so no tool call
     # waits on a network request; local file writes are fast and stay synchronous.
+    # Hand edits to the file are picked up every MEMORY_REFRESH_SECONDS (default 30 s;
+    # ~5 s for a live demo). For Drive that is a metadata check; it downloads only on change.
+    refresh = float(os.getenv("MEMORY_REFRESH_SECONDS", "30"))
     if os.getenv("MEMORY_BACKEND", "local") == "drive":
-        backing = DriveStore(os.environ["DRIVE_FOLDER_ID"], os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
-        store = CachedStore(backing, write_behind=True)
+        try:
+            backing = DriveStore(os.environ["DRIVE_FOLDER_ID"], os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+        except MemoryFileMissing as e:
+            raise SystemExit(str(e)) from None
+        store = CachedStore(backing, write_behind=True, refresh_interval=refresh)
     else:
         backing = LocalFileStore(os.getenv("LOCAL_MEMORY_PATH", HERE / "demo_data" / "memories.md"))
-        store = CachedStore(backing, write_behind=False)
+        store = CachedStore(backing, write_behind=False, refresh_interval=refresh)
     return MemoryService(store, KeywordRetriever(), today=today)
 
 
@@ -134,9 +140,14 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
         the memory (kept as history). Optionally schedule the next check."""
         return safe(WRITE, service.resolve_review, memory_id, still_true, review_in_days)
 
+    backing = getattr(service.store, "backing", service.store)
+    file_meta = {"backend": "google-drive" if isinstance(backing, DriveStore) else "local-file"}
+    if link := getattr(backing, "web_view_link", None):
+        file_meta["webViewLink"] = link  # where the user can open their own file
+
     @mcp.resource(MEMORY_URI, name="memories.md", title="Your memory file",
                   description="The user's canonical memory file (Markdown), as stored.",
-                  mime_type="text/markdown")
+                  mime_type="text/markdown", meta=file_meta)
     def memory_file() -> str:
         require_scope(READ)
         return service.export_markdown()
