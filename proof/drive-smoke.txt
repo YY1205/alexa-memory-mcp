@@ -1,0 +1,32 @@
+# 2026-10-16T06:25:44+00:00 | Google Drive smoke check
+# folder ...lyZD | file memories.md ...LT6A | version 3 | refresh every 3 s
+
+## 0. Demo reset (explicit) -> current seed
+reset wrote 10 records in 1672 ms (admin action, not a tool call); Drive version now 4
+
+## 1. Write-behind
+propose_memory 1.0 ms, confirm_memory 0.2 ms (tool calls return before Drive is written)
+reached Drive after 2.6 s (debounce 1 s), visible to another Drive client: True
+
+## 2. Outside edit picked up by the refresh
+another client renamed the dog Biscuit -> Pepper (Drive version 6)
+recall('my dog') answers with Pepper after 1.5 s
+
+## 3. Conflict merge (both sides changed)
+local (unsaved): new bike fact; MEM-0010 -> 20 minutes
+outside edit:    MEM-0002 -> also avoids eggs; MEM-0010 -> 5 minutes
+PASS  local new fact kept
+PASS  outside-only edit kept
+PASS  conflict: local wins
+PASS  conflict logged
+
+## Tool-call latency during the checks (in-process, Drive never on the path)
+8 calls, max 1.0 ms
+
+reset to the seed again (Drive version 11)
+
+## Summary
+PASS  write-behind
+PASS  outside edit picked up
+PASS  conflict merge
+PASS  tool calls < 500 ms
