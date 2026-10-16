@@ -16,6 +16,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+import public_pages
 from auth.oauth import READ, WRITE, AuthSettings, OAuthServer, ScopeError, require_scope
 
 from memory.cache import CachedStore
@@ -188,6 +189,7 @@ def build_app(service: MemoryService | None = None):
     app = build_server(service or build_service(), oauth).streamable_http_app(
         stateless_http=True, json_response=True, host=host, transport_security=security)
     app.router.routes.extend(oauth.routes())
+    app.router.routes.extend(public_pages.routes())  # /privacy, /terms, /addon-assets/*
     app.router.routes.append(Route("/healthz", lambda request: JSONResponse({"ok": True})))
     return oauth.middleware(app)
 
