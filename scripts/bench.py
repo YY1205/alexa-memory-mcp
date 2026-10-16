@@ -86,11 +86,21 @@ def main() -> int:
     ap.add_argument("--token", help="access token (scripts/oauth_token.py) or the localhost dev token")
     ap.add_argument("-n", type=int, default=50, help="iterations per tool (default 50)")
     ap.add_argument("--budget-ms", type=float, default=500, help="p95 budget (default 500, Alexa+)")
+    ap.add_argument("--rounds", type=int, default=1,
+                    help="repeat the run, pausing in between, so background saves overlap tool calls")
+    ap.add_argument("--pause", type=float, default=0.0, help="seconds between rounds")
     args = ap.parse_args()
 
-    timings = anyio.run(run_bench, args.url, args.token, args.n)
+    timings: dict[str, list[float]] = {}
+    started = time.monotonic()
+    for i in range(args.rounds):
+        if i:
+            time.sleep(args.pause)
+        for key, values in anyio.run(run_bench, args.url, args.token, args.n).items():
+            timings.setdefault(key, []).extend(values)
     table, ok = report(timings, args.budget_ms)
-    print(f"Round-trip latency per tool call, {args.url}, n={args.n} iterations")
+    span = f", {args.rounds} rounds over {time.monotonic() - started:.0f} s" if args.rounds > 1 else ""
+    print(f"Round-trip latency per tool call, {args.url}, n={args.n} iterations{span}")
     print(table)
     return 0 if ok else 1
 
