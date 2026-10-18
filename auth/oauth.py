@@ -134,6 +134,15 @@ class _FailureLimiter:
         self._global.append(now)
 
 
+def client_address(request: Request, trust_proxy: bool) -> str:
+    """The caller's address. Behind one trusted proxy (an ALB) use the RIGHTMOST
+    X-Forwarded-For entry: that's the one the proxy appended; entries to its left come
+    from the client and can be forged."""
+    if trust_proxy and (fwd := request.headers.get("x-forwarded-for")):
+        return fwd.split(",")[-1].strip()
+    return request.client.host if request.client else "?"
+
+
 def _json_error(status: int, error: str, description: str) -> JSONResponse:
     # Deliberately no WWW-Authenticate header (Alexa+ checklist). `message` mirrors the
     # 401 example in the Alexa+ account-linking docs; `error_description` is RFC 6749.
@@ -222,9 +231,7 @@ class OAuthServer:
 
     # ---------------------------------------------------------------- /authorize
     def _client_key(self, request: Request) -> str:
-        if self.s.trust_proxy and (fwd := request.headers.get("x-forwarded-for")):
-            return fwd.split(",")[0].strip()
-        return request.client.host if request.client else "?"
+        return client_address(request, self.s.trust_proxy)
 
     def _redirect(self, redirect_uri: str, **params) -> RedirectResponse:
         params = {k: v for k, v in params.items() if v is not None}

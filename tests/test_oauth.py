@@ -204,6 +204,19 @@ def test_wrong_passphrase_is_refused_and_rate_limited(client):
         oc.owner_approves(client, url, PASSPHRASE)
 
 
+def test_rate_limit_uses_the_address_the_proxy_added():
+    from starlette.requests import Request
+
+    def request(xff):
+        return Request({"type": "http", "headers": [(b"x-forwarded-for", xff.encode())],
+                        "client": ("10.0.0.5", 1234)})
+
+    # a client can put anything on the left; the ALB appends the real address on the right
+    assert oauth_mod.client_address(request("6.6.6.6, 203.0.113.9"), True) == "203.0.113.9"
+    assert oauth_mod.client_address(request("203.0.113.9"), True) == "203.0.113.9"
+    assert oauth_mod.client_address(request("6.6.6.6, 203.0.113.9"), False) == "10.0.0.5"
+
+
 def test_owner_can_deny(client):
     ep = oc.discover(RESOURCE, client)
     _, challenge = oc.pkce_pair()
