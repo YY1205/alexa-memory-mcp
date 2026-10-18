@@ -23,42 +23,42 @@
           "Is there anything in my memory I should update?"
         ],
         "privacyAndCompliance": {
-          "privacyPolicyUrl": "https://portable-memory.example.com/privacy",
-          "termsOfUseUrl": "https://portable-memory.example.com/terms"
+          "privacyPolicyUrl": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/privacy",
+          "termsOfUseUrl": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/terms"
         },
         "mediaAssets": {
           "icons": {
             "light": [
               {
                 "size": "72x72",
-                "uri": "https://portable-memory.example.com/addon-assets/icon-72.png"
+                "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/icon-72.png"
               },
               {
                 "size": "64x64",
-                "uri": "https://portable-memory.example.com/addon-assets/icon-64.png"
+                "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/icon-64.png"
               },
               {
                 "size": "88x88",
-                "uri": "https://portable-memory.example.com/addon-assets/icon-88.png"
+                "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/icon-88.png"
               },
               {
                 "size": "126x126",
-                "uri": "https://portable-memory.example.com/addon-assets/icon-126.png"
+                "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/icon-126.png"
               },
               {
                 "size": "180x180",
-                "uri": "https://portable-memory.example.com/addon-assets/icon-180.png"
+                "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/icon-180.png"
               },
               {
                 "size": "241x241",
-                "uri": "https://portable-memory.example.com/addon-assets/icon-241.png"
+                "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/icon-241.png"
               }
             ],
             "dark": []
           },
           "carouselImages": [
             {
-              "uri": "https://portable-memory.example.com/addon-assets/carousel-600x900.png",
+              "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/addon-assets/carousel-600x900.png",
               "size": "600x900",
               "altText": "Portable Memory: your memory is a file you own. Nothing is saved until you say yes."
             }
@@ -75,7 +75,7 @@
         "endpoints": {
           "default": {
             "type": "HTTPS",
-            "uri": "https://portable-memory.example.com/mcp"
+            "uri": "https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp"
           }
         }
       }

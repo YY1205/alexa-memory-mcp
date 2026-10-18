@@ -187,14 +187,16 @@ ACTUAL > 80 % and FORECASTED > 100 %. If a budget already exists, it is shown to
 ## 7. Teardown on Nov 21, 2026 (judging ends Nov 20)
 
 ```bash
-aws ecs delete-express-gateway-service --service-arn <pm-sim arn>
-aws ecs delete-express-gateway-service --service-arn <pm-server arn>
+# zsh: write ${ACCOUNT} with braces ($ACCOUNT:r would be expanded as a modifier)
+aws ecs delete-express-gateway-service --service-arn arn:aws:ecs:us-east-1:${ACCOUNT}:service/default/pm-sim
+aws ecs delete-express-gateway-service --service-arn arn:aws:ecs:us-east-1:${ACCOUNT}:service/default/pm-server
 #   Express Mode deprovisions the shared ALB, target groups, listener rules and its
 #   ACM certificates when no Express services remain; verify with:
 aws elbv2 describe-load-balancers        # expect none left from Express Mode
 aws acm list-certificates                # expect none left from Express Mode
 aws ecs delete-cluster --cluster default # only if Express created it and it's empty
-aws logs delete-log-group --log-group-name <each service log group>
+aws logs delete-log-group --log-group-name /aws/ecs/default/pm-server-5b4f
+aws logs delete-log-group --log-group-name /aws/ecs/default/pm-sim-9f80
 aws ecr delete-repository --repository-name alexa-memory-mcp --force
 aws ssm delete-parameters --names /alexa-memory-mcp/oauth-client-secret \
   /alexa-memory-mcp/owner-passphrase-hash /alexa-memory-mcp/sim-passcode /alexa-memory-mcp/sim-session-secret
@@ -206,13 +208,16 @@ aws iam detach-role-policy --role-name alexa-memory-ecs-infrastructure --policy-
 aws iam delete-role --role-name alexa-memory-ecs-infrastructure
 aws iam delete-role-policy --role-name alexa-memory-sim-task --policy-name bedrock-nova-pro
 aws iam delete-role --role-name alexa-memory-sim-task
-aws budgets delete-budget --account-id <ACCOUNT> --budget-name alexa-memory-mcp   # if created
+aws budgets delete-budget --account-id ${ACCOUNT} --budget-name alexa-memory-mcp
+#   Optional: ~/.config/alexa-memory-mcp/demo-secrets.txt (judge passcode, demo passphrase)
+rm ~/.config/alexa-memory-mcp/demo-secrets.txt
 #   Leftover check: anything still tagged project=alexa-memory-mcp
 aws resourcegroupstaggingapi get-resources --tag-filters Key=project,Values=alexa-memory-mcp
 ```
 
-Service-linked roles that ECS, ELB and Application Auto Scaling create are shared AWS roles
-and are left in place (no cost). The exact ARNs/names are recorded in docs/DEPLOY-LOG.md
+The service-linked roles `AWSServiceRoleForECS`, `AWSServiceRoleForElasticLoadBalancing` and
+`AWSServiceRoleForApplicationAutoScaling_ECSService` (created Oct 18, see DEPLOY-LOG) are
+shared AWS-managed roles and are left in place (no cost). The exact ARNs/names are recorded in docs/DEPLOY-LOG.md
 during deployment so teardown can be copied.
 
 ## 8. Decisions needed from you
