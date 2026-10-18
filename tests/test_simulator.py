@@ -92,8 +92,8 @@ def test_status_reports_server_tools_and_brain(sim):
     s = sim.get("/api/status").json()
     assert s["brain"] == "scripted"
     assert s["server"]["has_instructions"]
-    assert set(s["server"]["tools"]) == {"recall", "propose_memory", "supersede_memory", "confirm_memory",
-                                         "list_due_reviews", "resolve_review"}
+    assert set(s["server"]["tools"]) == {"recall", "memory_overview", "propose_memory", "supersede_memory",
+                                         "confirm_memory", "list_due_reviews", "resolve_review"}
 
 
 def test_index_page_is_served(sim):
@@ -234,7 +234,7 @@ def test_unlinked_simulator_asks_to_link_and_tokens_never_reach_the_browser(modu
         assert r.headers["location"] == "/?linked=1"
         status = client.get("/api/status").json()
         assert status["account"]["linked"] and status["account"]["scopes"] == ["memory.read", "memory.write"]
-        assert len(status["server"]["tools"]) == 6
+        assert len(status["server"]["tools"]) == 7
         out = client.post("/api/utterance", json={"session_id": "s", "text": "When is my sister's birthday?"})
         memory_page = client.get("/api/memory")
         for response in (client.get("/api/status"), out, memory_page, r):

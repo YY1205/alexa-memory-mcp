@@ -65,17 +65,50 @@ class MemoryService:
         return to_markdown(self.store.load())
 
     def recall(self, query: str, category: str | None = None, limit: int = 5) -> dict:
-        active = [r for r in self.store.load() if r.status == "active"]
-        if category:
-            active = [r for r in active if r.category == category]
+        all_active = [r for r in self.store.load() if r.status == "active"]
+        active = [r for r in all_active if r.category == category] if category else all_active
         result = self.retriever.retrieve(query, active, limit)
         today = self._today()
-        return {
+        out = {
             "found": bool(result.records),
             "spoken_answer": result.spoken_answer,
             "memories": [r.to_public() for r in result.records],
             "needs_review": [r.id for r in result.records if r.is_due_for_review(today)],
             "engine": result.engine,
+            # Always say how much is remembered, so "no match" is never read as "no memory".
+            "total_active": len(all_active),
+        }
+        if not result.records and all_active:
+            out["note"] = (f"No memory matched these words, but {len(all_active)} memories exist. "
+                           "For general questions use memory_overview, or recall with specific words.")
+        return out
+
+    def overview(self, recent: int = 3) -> dict:
+        """What is remembered, in general: counts, newest facts, what needs review."""
+        records = self.store.load()
+        active = [r for r in records if r.status == "active"]
+        today = self._today()
+        by_category: dict[str, int] = {}
+        for r in active:
+            by_category[r.category] = by_category.get(r.category, 0) + 1
+        newest = sorted(active, key=lambda r: (r.updated_at, r.id), reverse=True)[:recent]
+        due = [r for r in active if r.is_due_for_review(today)]
+        if not active:
+            spoken = "I don't have any memories about you yet."
+        else:
+            examples = " and ".join(f"that {clause(r.fact)}" for r in newest[:2])
+            spoken = f"I remember {len(active)} things about you, including {examples}."
+            if due:
+                count = "One" if len(due) == 1 else str(len(due))
+                spoken += f" {count} of them may need updating."
+        return {
+            "total_active": len(active),
+            "by_category": dict(sorted(by_category.items())),
+            "recent": [r.to_public() for r in newest],
+            "due_for_review": len(due),
+            "pending": sum(r.status == "pending" for r in records),
+            "historical": sum(r.status == "historical" for r in records),
+            "spoken_summary": spoken,
         }
 
     def list_due_reviews(self) -> dict:

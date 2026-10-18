@@ -128,6 +128,31 @@ def test_unrelated_memories_are_not_related(service):
     assert p["possibly_related"] == []
 
 
+def test_overview_answers_what_do_you_know_about_me(service):
+    o = service.overview()
+    assert o["total_active"] == 10 and o["due_for_review"] == 1 and o["pending"] == 0
+    assert sum(o["by_category"].values()) == 10 and o["by_category"]["profile"] == 3
+    assert [m["id"] for m in o["recent"]] == ["MEM-0010", "MEM-0009", "MEM-0008"]
+    assert o["spoken_summary"] == (
+        "I remember 10 things about you, including that you are learning Spanish and practice "
+        "15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of "
+        "each month. One of them may need updating.")
+
+
+def test_recall_never_looks_empty_when_memory_exists(service):
+    for query in ("", "what do you know about me", "me"):
+        out = service.recall(query)
+        assert out["found"] is False and out["total_active"] == 10 and "10 memories exist" in out["note"]
+    assert service.recall("sister birthday")["total_active"] == 10
+
+
+def test_overview_of_an_empty_memory(tmp_path):
+    empty = MemoryService(LocalFileStore(tmp_path / "none.md"))
+    o = empty.overview()
+    assert o["total_active"] == 0 and o["spoken_summary"] == "I don't have any memories about you yet."
+    assert "note" not in empty.recall("anything")
+
+
 def test_supersede_keeps_history(service):
     p = service.propose("The user now lives in Seattle.", supersedes="MEM-0001")
     service.confirm(p["pending_id"], True)
@@ -169,8 +194,8 @@ def test_full_voice_flow_over_http(http_server):
         async with Client(streamable_http_client(f"{http_server}/mcp", http_client=http)) as c:
             assert c.protocol_version >= "2025-11-25"  # Alexa+ requires 2025-11-25 or later
             tools = {t.name for t in (await c.list_tools()).tools}
-            assert tools == {"recall", "propose_memory", "supersede_memory", "confirm_memory",
-                             "list_due_reviews", "resolve_review"}
+            assert tools == {"recall", "memory_overview", "propose_memory", "supersede_memory",
+                             "confirm_memory", "list_due_reviews", "resolve_review"}
             p = await c.call_tool("propose_memory", {"fact": "The user parks on level 3 at work.",
                                                      "category": "other"})
             pending = json.loads(p.content[0].text)

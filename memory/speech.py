@@ -13,6 +13,9 @@ IRREGULAR_PAST = {"got", "was", "had", "went", "made", "did", "bought", "moved",
                   "took", "began", "came", "saw", "met", "sold", "lost", "won", "paid"}
 MODALS = {"will", "can", "should", "would", "could", "might", "must", "may", "now", "just",
           "also", "still", "never", "always", "really", "usually"}
+# plural nouns that may follow "and" in a fact; leave them alone
+NOT_VERBS = {"his", "hers", "its", "this", "has", "was", "is", "us", "plans", "kids", "friends",
+             "parents", "cats", "dogs", "tools", "times", "days", "weeks", "months", "years"}
 _SECOND = {"is": "are", "was": "were", "has": "have", "does": "do", "goes": "go"}
 
 
@@ -36,6 +39,12 @@ def to_you(text: str) -> str:
     s = re.sub(r"\bthe user\b", "you", s, flags=re.I)
     s = re.sub(r"\btheir\b", "your", s)
     s = re.sub(r"\bthey (\w+)", lambda m: "you " + second_person_verb(m.group(1)), s)
+    # A second verb for the same subject: "you are learning Spanish and practices ..." ->
+    # "... and practice ...". Only right after "and", and only when "you" is the subject.
+    if re.match(r"^you\b", s, re.I):  # not "your sister ... and plays": other subject
+        s = re.sub(r"\band ([a-z]+(?:es|s))\b(?= [a-z0-9])",
+                   lambda m: "and " + second_person_verb(m.group(1))
+                   if m.group(1) not in NOT_VERBS else m.group(0), s)
     return s[0].upper() + s[1:] if s else s
 
 

@@ -49,6 +49,9 @@ Voice rules:
   list_due_reviews, ask whether each fact is still true, and record the answer with
   resolve_review. If the user gives new information instead, retire the old fact
   (still_true=false) and propose the new one.
+- For general questions about what you remember ("What do you know about me?",
+  "Do you have any memory of me?"), call memory_overview. Never tell the user you have
+  no memory of them unless memory_overview (or recall's total_active) says 0.
 - Memories are written about "the user" in the third person; speak to the user in
   the second person. Keep spoken answers short. Do not read ids aloud.
 """
@@ -97,10 +100,21 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
     def recall(query: str, category: str | None = None) -> dict:
         """Look up what the user has asked you to remember. Use whenever the user asks
         about themselves, their plans, preferences or past decisions ("what did I say
-        about...", "when is my..."). Returns current memories only; phrase the spoken
-        answer from them. category is optional: profile, preference, active_context,
+        about...", "when is my..."). Search words matter: pass the topic ("sister
+        birthday"). Returns current memories only; phrase the spoken answer from them.
+        total_active is the number of memories overall: if nothing matched but
+        total_active > 0, the memory is not empty (use memory_overview for general
+        questions). category is optional: profile, preference, active_context,
         project, decision, other."""
         return safe(READ, service.recall, query, category)
+
+    @mcp.tool()
+    def memory_overview() -> dict:
+        """What you remember about the user in general: how many memories, how many per
+        category, the most recently updated ones, and how many are due for review. Use
+        for questions like "What do you know about me?", "Do you have any memory of me?",
+        "What have I told you?". spoken_summary is a ready-to-say sentence."""
+        return safe(READ, service.overview)
 
     @mcp.tool()
     def propose_memory(fact: str, category: str = "other", review_in_days: int | None = None) -> dict:

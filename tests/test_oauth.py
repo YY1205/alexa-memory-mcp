@@ -340,7 +340,7 @@ def test_read_only_token_cannot_write(client):
     ep, verifier, params = start_link(client, scopes=["memory.read"])
     tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
     assert tokens.scope == "memory.read"
-    for tool, args in [("recall", {"query": "sister"}), ("list_due_reviews", {})]:
+    for tool, args in [("recall", {"query": "sister"}), ("list_due_reviews", {}), ("memory_overview", {})]:
         assert "insufficient_scope" not in call_tool(client, tokens.access_token, tool, args).text
     for tool, args in [("propose_memory", {"fact": "The user hates jazz."}),
                        ("supersede_memory", {"old_memory_id": "MEM-0001", "new_fact": "x"}),
@@ -356,8 +356,8 @@ def test_read_only_token_cannot_write(client):
 def test_write_only_token_cannot_read(client):
     ep, verifier, params = start_link(client, scopes=["memory.write"])
     tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
-    assert "insufficient_scope: memory.read required" in call_tool(client, tokens.access_token, "recall",
-                                                                    {"query": "sister"}).text
+    for tool, args in [("recall", {"query": "sister"}), ("memory_overview", {})]:
+        assert "insufficient_scope: memory.read required" in call_tool(client, tokens.access_token, tool, args).text
     r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {tokens.access_token}"},
                     json={"jsonrpc": "2.0", "id": 1, "method": "resources/read",
                           "params": {"uri": "memory://memories.md"}})
