@@ -34,7 +34,8 @@ ECS Express Mode; see [docs/DEPLOY-PLAN.md](docs/DEPLOY-PLAN.md).
 
 | Tool | Purpose |
 |---|---|
-| `recall(query, category?)` | Current memories relevant to a question (keyword search, served from memory) |
+| `recall(query, category?)` | Current memories relevant to a question (keyword search, served from memory); always reports `total_active` so "no match" never looks like "no memory" |
+| `memory_overview()` | General questions ("What do you know about me?"): counts per category, newest memories, how many need review, a speakable `spoken_summary` |
 | `propose_memory(fact, category, review_in_days?)` | Stage a new fact; returns a speakable `confirmation_prompt`, and `replaces` when it looks like an update to an existing memory |
 | `supersede_memory(old_memory_id, new_fact)` | Stage an explicit correction of a memory whose id is known |
 | `confirm_memory(pending_id, confirmed, replaces?)` | Save or discard a staged fact; with `replaces`, one yes saves the update and keeps the old fact as history |

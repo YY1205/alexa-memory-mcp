@@ -8,6 +8,8 @@ Manual (costs money, needs AWS). Start a memory server with DEMO_ADMIN=1 first, 
 
 Each conversation starts from freshly reset demo data. Pass/fail is judged from the
 memory file (read over MCP) and the replies, not from exact wording:
+  0, 7-9       "What do you know about me?" and other phrasings: the reply doesn't deny
+                having memory and mentions real content; nothing written
   1 recall      reply has the birthday; nothing written
   2 save        dentist fact active and user-confirmed; nothing pending
   3 correction  MEM-0006 historical, replaced by an active "27th" fact; nothing pending
@@ -38,13 +40,36 @@ from simulator.brains import BedrockBrain  # noqa: E402
 from simulator.mcp_link import McpLink  # noqa: E402
 
 CONVERSATIONS = {
+    0: ["What do you know about me?"],
     1: ["When is my sister's birthday?"],
     2: ["Remember that my dentist appointment is Friday at 3.", "Yes."],
     3: ["The kitchen contractor now starts on the 27th.", "Yes."],
     4: ["Is there anything I should update?", "I got the job, I start in November.", "Yes."],
     5: ["Remember that I hate jazz.", "No."],
     6: ["When does my dog need his heartworm pill?"],  # after a hand edit: Biscuit -> Pepper
+    # other phrasings of conversation 0 (the "do you have any memory of me?" bug)
+    7: ["Do you have any memory of me?"],
+    8: ["Do you remember anything about me?"],
+    9: ["What have I told you?"],
 }
+OVERVIEW_QUESTIONS = {0, 7, 8, 9}
+DENIALS = ("don't have any", "do not have any", "no memor", "don't know anything", "nothing about you",
+           "haven't told me", "don't have anything", "no information")
+KNOWN = ("10", "ten", "sister", "maya", "portland", "sam", "vegetarian", "spanish", "biscuit", "kitchen",
+         "marathon", "electric car", "job interview")
+
+
+def _describe(step: dict) -> str:
+    """Tool name plus what matters for diagnosing a failure (args, found/total)."""
+    if step.get("kind") != "mcp":
+        return step["tool"]
+    r = step["result"] if isinstance(step["result"], dict) else {}
+    extra = ""
+    if step["tool"] == "recall":
+        extra = f"({step['arguments'].get('query', '')!r} -> found={r.get('found')} total={r.get('total_active')})"
+    elif step["tool"] == "memory_overview":
+        extra = f"(total={r.get('total_active')})"
+    return step["tool"] + extra
 
 
 def judge(n: int, replies: list[str], records: dict) -> list[str]:
@@ -59,7 +84,15 @@ def judge(n: int, replies: list[str], records: dict) -> list[str]:
         if "the user" in reply.lower():
             problems.append('said "the user"')
     new = [r for r in records.values() if int(r.id[4:]) > 10]
-    if n == 1:
+    if n in OVERVIEW_QUESTIONS:
+        reply = " ".join(replies).lower()
+        if any(d in reply for d in DENIALS):
+            problems.append("said there is no memory")
+        if not any(k in reply for k in KNOWN):
+            problems.append("mentioned nothing that is remembered")
+        if new or any(r.status != "active" for r in records.values()):
+            problems.append("memory changed")
+    elif n == 1:
         if not any("November 2" in r for r in replies):
             problems.append("birthday not answered")
         if new or any(r.status != "active" for r in records.values()):
@@ -122,7 +155,7 @@ async def evaluate(url: str, token: str | None, models: list[str], repeats: int,
                         errors.append(out["error"])
                     else:
                         model_ms.append(out["model_latency_ms"])
-                    calls = ", ".join(s["tool"] for s in out["trace"]) or "-"
+                    calls = ", ".join(_describe(s) for s in out["trace"]) or "-"
                     lines.append(f"  YOU: {text}")
                     lines.append(f"  ALEXA: {out['reply_text']}")
                     lines.append(f"     tools: {calls} | model {out['model_latency_ms']:.0f} ms")
