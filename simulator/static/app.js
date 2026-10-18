@@ -152,6 +152,7 @@ async function api(path, options = {}) {
   });
   let data = null;
   try { data = await res.json(); } catch { /* non-JSON */ }
+  if (res.status === 401 && data && data.gate) location.href = "/gate";  // passcode session expired
   return { ok: res.ok, status: res.status, data: data || {} };
 }
 

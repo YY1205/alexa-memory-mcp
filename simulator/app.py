@@ -11,6 +11,12 @@ Env:  MCP_SERVER_URL   memory server endpoint (default http://127.0.0.1:8000/mcp
       SIM_ADMIN_TOKEN  if set, "Reset demo" requires it (X-Admin-Token header);
                        if unset, reset is only allowed from this machine
       SIM_HOST, SIM_PORT (default 127.0.0.1, 8001)
+      Public demo protection (simulator/guard.py):
+      SIM_PASSCODE, SIM_SESSION_SECRET  judge passcode gate (signed session cookie);
+                       required on a non-local host. Reset demo and Unlink need it.
+      SIM_TRUST_PROXY=1  client address from the load balancer's X-Forwarded-For
+      SIM_RATE_PER_IP_MINUTE (10), SIM_RATE_PER_IP_DAY (120), SIM_RATE_GLOBAL_MINUTE (60),
+      SIM_DAILY_MODEL_CALLS (300): utterance rate limits and the daily Bedrock call cap
 """
 from __future__ import annotations
 
@@ -31,6 +37,7 @@ from starlette.staticfiles import StaticFiles
 
 from .agent import Agent, _unwrap
 from .brains import BedrockBrain, Brain, BrainError, ScriptedBrain, UnavailableBrain
+from .guard import Guard, GuardSettings
 from .linking import AccountLink
 from .mcp_link import McpLink, NotLinked
 from auth.client import OAuthError
@@ -59,12 +66,27 @@ def build_account(mcp_url: str) -> AccountLink:
                        f"{public}/oauth/callback")
 
 
+def build_guard(mcp_url: str) -> Guard:
+    env = os.getenv
+    return Guard(GuardSettings(
+        passcode=env("SIM_PASSCODE") or None, session_secret=env("SIM_SESSION_SECRET") or None,
+        secure_cookie=env("SIM_PUBLIC_URL", "").startswith("https://"),
+        trust_proxy=env("SIM_TRUST_PROXY") == "1",
+        per_ip_per_minute=int(env("SIM_RATE_PER_IP_MINUTE", "10")),
+        per_ip_per_day=int(env("SIM_RATE_PER_IP_DAY", "120")),
+        global_per_minute=int(env("SIM_RATE_GLOBAL_MINUTE", "60")),
+        daily_model_calls=int(env("SIM_DAILY_MODEL_CALLS", "300")),
+        privacy_url=mcp_url.rsplit("/mcp", 1)[0] + "/privacy",
+    ))
+
+
 def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_token: str | None = None,
-              account: AccountLink | None = None) -> Starlette:
+              account: AccountLink | None = None, guard: Guard | None = None) -> Starlette:
     mcp_url = mcp_url or os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8000/mcp")
     account = account or build_account(mcp_url)
+    guard = guard or build_guard(mcp_url)
     link = McpLink(mcp_url, token_provider=account.access_token)
-    agent = Agent(link, brain or build_brain())
+    agent = Agent(link, brain or build_brain(), model_cap=guard.model_cap if guard.gated else None)
     admin_token = admin_token if admin_token is not None else os.getenv("SIM_ADMIN_TOKEN")
     state: dict = {"server": None, "server_error": None}
 
@@ -104,6 +126,8 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
             "server_url": link.url, "server": state["server"], "server_error": state["server_error"],
             "reset_needs_token": bool(admin_token),
             "account": account.status(),
+            "gated": guard.gated,
+            "model_calls_today": guard.model_cap.used, "daily_model_calls": guard.model_cap.limit,
         })
 
     async def utterance(request: Request):
@@ -112,6 +136,8 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
         text = str(body.get("text") or "").strip()[:MAX_UTTERANCE]
         if not text:
             return JSONResponse({"error": "Say or type something first."}, status_code=400)
+        if limited := guard.allow_utterance(request):
+            return JSONResponse({"error": limited, "rate_limited": True}, status_code=429)
         return JSONResponse(await agent.handle(session_id, text))
 
     async def memory(request: Request):
@@ -130,6 +156,8 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
                              "web_view_link": link_url if str(link_url or "").startswith("https://") else None})
 
     def reset_allowed(request: Request) -> bool:
+        if guard.gated:
+            return True  # the passcode gate already checked this request
         if admin_token:
             return hmac.compare_digest(request.headers.get("x-admin-token", ""), admin_token)
         client = request.client.host if request.client else ""
@@ -171,7 +199,12 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
         state["server"] = None
         return JSONResponse({"linked": False})
 
-    return Starlette(lifespan=lifespan, routes=[
+    async def healthz(request: Request):
+        return JSONResponse({"ok": True})
+
+    app = Starlette(lifespan=lifespan, routes=[
+        Route("/healthz", healthz),
+        Route("/gate", guard.gate, methods=["GET", "POST"]),
         Route("/oauth/start", link_start),
         Route("/oauth/callback", link_callback),
         Route("/api/unlink", unlink, methods=["POST"]),
@@ -182,6 +215,7 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
         Route("/api/reset", reset, methods=["POST"]),
         Mount("/static", StaticFiles(directory=STATIC), name="static"),
     ])
+    return guard.middleware(app)
 
 
 if __name__ == "__main__":
@@ -189,6 +223,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
     host = os.getenv("SIM_HOST", "127.0.0.1")
-    if host not in LOCAL_CLIENTS and not os.getenv("SIM_ADMIN_TOKEN"):
-        raise SystemExit("Refusing to listen publicly without SIM_ADMIN_TOKEN (protects Reset demo).")
+    if host not in LOCAL_CLIENTS and not (os.getenv("SIM_PASSCODE") and os.getenv("SIM_SESSION_SECRET")):
+        raise SystemExit("Refusing to listen publicly without SIM_PASSCODE and SIM_SESSION_SECRET "
+                         "(the judge passcode gate).")
     uvicorn.run(build_app(), host=host, port=int(os.getenv("SIM_PORT", "8001")))

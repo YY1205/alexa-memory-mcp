@@ -55,9 +55,10 @@ def _unwrap(exc: BaseException) -> BaseException:
 
 class Agent:
     def __init__(self, link: McpLink, brain: Brain, max_steps: int = 8, max_turns: int = 20,
-                 skills: list[Skill] | None = None):
+                 skills: list[Skill] | None = None, model_cap=None):
         self.link = link
         self.brain = brain
+        self.model_cap = model_cap  # DailyCap: model calls allowed per UTC day (public demo)
         self.skills = load_skills() if skills is None else skills
         self.max_steps = max_steps
         self.max_turns = max_turns  # user utterances kept as interaction context
@@ -122,6 +123,9 @@ class Agent:
                     tool_config["tools"].append(reference_tool_spec(self.skills))
                 for _ in range(self.max_steps):
                     system = self.system_prompt(profile, session.loaded_skills)
+                    if self.model_cap and self.brain.name != "scripted" and not self.model_cap.take():
+                        raise BrainError("The demo has reached today's limit for answers. "
+                                         "Please try again tomorrow.")
                     t0 = time.perf_counter()
                     response = await anyio.to_thread.run_sync(
                         self.brain.converse, system, session.messages, tool_config)
