@@ -16,6 +16,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+import logsafe
 import public_pages
 from auth.oauth import READ, WRITE, AuthSettings, OAuthServer, ScopeError, require_scope
 
@@ -197,6 +198,7 @@ def build_app(service: MemoryService | None = None):
 if __name__ == "__main__":
     import uvicorn
 
+    logsafe.install()
     service = build_service()
     try:
         uvicorn.run(build_app(service), host=os.getenv("HOST", "127.0.0.1"), port=int(os.getenv("PORT", "8000")))

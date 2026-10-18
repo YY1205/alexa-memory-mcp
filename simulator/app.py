@@ -40,6 +40,7 @@ from .brains import BedrockBrain, Brain, BrainError, ScriptedBrain, UnavailableB
 from .guard import Guard, GuardSettings
 from .linking import AccountLink
 from .mcp_link import McpLink, NotLinked
+import logsafe
 from auth.client import OAuthError
 
 log = logging.getLogger("simulator")
@@ -226,4 +227,5 @@ if __name__ == "__main__":
     if host not in LOCAL_CLIENTS and not (os.getenv("SIM_PASSCODE") and os.getenv("SIM_SESSION_SECRET")):
         raise SystemExit("Refusing to listen publicly without SIM_PASSCODE and SIM_SESSION_SECRET "
                          "(the judge passcode gate).")
+    logsafe.install()
     uvicorn.run(build_app(), host=host, port=int(os.getenv("SIM_PORT", "8001")))
