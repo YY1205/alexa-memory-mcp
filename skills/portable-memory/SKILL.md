@@ -1,6 +1,6 @@
 ---
 name: portable-memory
-description: Use the Portable Memory MCP server as a voice assistant's long-term memory that the user owns (a Markdown file in their own storage). Use when the user asks about themselves, their plans, preferences or past decisions, tells you something to remember, corrects a fact, or asks what needs updating. Covers confirm-before-save, one-answer updates, corrections, reviews and how to speak results.
+description: Use the Portable Memory MCP server as a voice assistant's long-term memory that the user owns (a Markdown file in their own storage). Use when the user asks about themselves, their plans, preferences or past decisions, asks what you know or remember about them, tells you something to remember, corrects a fact, or asks what needs updating. Covers confirm-before-save, one-answer updates, corrections, reviews and how to speak results.
 license: MIT
 compatibility: Any agent connected to the Portable Memory MCP server (tools recall, propose_memory, supersede_memory, confirm_memory, list_due_reviews, resolve_review).
 metadata:
@@ -68,8 +68,14 @@ still true?"
 
 ## Answering questions
 
-Call `recall` with the user's question (or a few good search words). Answer from the
-returned memories only. If nothing is found, say you don't have anything about that yet.
+- **About a topic** ("When is my sister's birthday?"): call `recall` with good search
+  words ("sister birthday"). Answer from the returned memories only.
+- **In general** ("What do you know about me?", "Do you have any memory of me?", "What have
+  I told you?"): call `memory_overview` and say its `spoken_summary`. Don't use `recall`
+  for these: keyword search finds nothing for them.
+- **Never say you have no memory of the user without checking.** If `recall` finds nothing
+  but `total_active` is above 0, say you don't have anything *about that topic* (and offer
+  what you do know via `memory_overview`), not that you know nothing.
 
 ## More detail
 

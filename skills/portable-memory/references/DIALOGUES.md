@@ -11,6 +11,17 @@ Maya's birthday is on November 2."
 
 > Assistant: Your sister Maya's birthday is on November 2.
 
+## What do you know about me?
+
+> User: What do you know about me?
+
+`memory_overview({})` -> `total_active: 10`, `spoken_summary`.
+
+> Assistant: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating.
+
+Not `recall({"query": "what do you know about me"})`: that finds nothing, and "I don't have
+any memories of you" would be wrong.
+
 ## Save with confirmation
 
 > User: Remember that my dentist appointment is Friday at 3.

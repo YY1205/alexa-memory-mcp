@@ -9,7 +9,7 @@ for review, the kitchen contractor starts in 6 days, and the half marathon is 4 
 second person, so with Bedrock those questions are identical; other replies may be worded
 differently, but the tool calls and memory-file changes should match.
 
-Tests: `tests/test_simulator.py` runs all six end to end against a real server.
+Tests: `tests/test_simulator.py` runs conversations 0-6 end to end against a real server.
 
 ## Setup
 
@@ -26,6 +26,18 @@ blue button and speak; or type and press Enter.
 Show the three areas while talking: the device, **Under the hood** (each MCP call and its
 latency against the 500 ms budget) and **Your memory file** (the real `memories.md`, read
 through the MCP resource after every turn).
+
+## 0. What do you know about me? (about 15 s)
+
+| Speaker | Line |
+|---|---|
+| You | What do you know about me? |
+| Alexa | I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating. |
+
+- Under the hood: `memory_overview` (counts per category, newest memories, how many are due
+  for review). A general question needs the overview, not keyword `recall`, which would find
+  nothing and make Alexa wrongly say it knows nothing about you.
+- Good opener for the video: it shows the memory exists before anything else happens.
 
 ## 1. Recall (about 15 s)
 
@@ -125,5 +137,5 @@ it; none of them owns it."
 
 ## Timing budget
 
-About 2 min 35 s of conversation plus intro/outro. Keep it under 3 minutes: if it runs long,
+About 2 min 50 s of conversation plus intro/outro. Keep it under 3 minutes: if it runs long,
 drop conversation 5 (decline) or shorten the closing shot.

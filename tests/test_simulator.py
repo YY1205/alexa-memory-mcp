@@ -102,6 +102,13 @@ def test_index_page_is_served(sim):
     assert sim.get("/static/app.js").status_code == 200
 
 
+def test_conversation_0_what_do_you_know_about_me(chat):
+    out = chat("What do you know about me?")
+    assert tools(out) == ["memory_overview"]
+    assert out["reply_text"].startswith("I remember 10 things about you, including that ")
+    assert "may need updating" in out["reply_text"] and "MEM-" not in out["reply_text"]
+
+
 def test_conversation_1_recall(chat):
     out = chat("When is my sister's birthday?")
     assert tools(out) == ["recall"]

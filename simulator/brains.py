@@ -119,6 +119,8 @@ class BedrockBrain:
 YES = {"yes", "yeah", "yep", "sure", "correct", "right", "please do", "do it", "ok", "okay",
        "yes please", "it is", "still true", "that's right"}
 NO = {"no", "nope", "no thanks", "don't", "do not", "never mind", "not really", "cancel"}
+OVERVIEW_ASK = re.compile(r"\b(what do you know about me|memory of me|remember anything about me|"
+                          r"what have i told you|what do you remember)\b")
 REVIEW_ASK = re.compile(r"\b(anything|something)\b.*\b(update|out of date|check|review)\b|\bout of date\b")
 _THIRD = {"am": "is", "have": "has", "do": "does", "go": "goes", "are": "is", "was": "was"}
 
@@ -306,6 +308,10 @@ class ScriptedBrain:
             return ("say", "Sorry, I'm not sure what you're answering. What would you like to do?")
 
         if utterance.strip().endswith("?"):
+            if OVERVIEW_ASK.search(u):  # general question: never answer it with keyword recall
+                if n == 0:
+                    return ("tool", "memory_overview", {})
+                return ("say", last["spoken_summary"])
             if REVIEW_ASK.search(u):
                 if n == 0:
                     return ("tool", "list_due_reviews", {})

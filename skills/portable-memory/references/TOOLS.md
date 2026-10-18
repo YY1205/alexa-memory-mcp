@@ -13,9 +13,18 @@ Find current (active) memories relevant to a question. `category` is optional:
 Returns: `found` (bool), `memories` (list, most relevant first: `id`, `fact`,
 `category`, `status`, `confirmed_by_user`, `updated_at`, `review_after`),
 `needs_review` (ids among them whose review date has passed), `spoken_answer`
-(always null; you phrase the answer), `engine`.
+(always null; you phrase the answer), `engine`, `total_active` (number of active memories
+overall), and `note` when nothing matched although memories exist.
 
-Retrieval is keyword-based: search words matter more than full sentences.
+Retrieval is keyword-based: search words matter more than full sentences. An empty query
+or a meta question ("what do you know about me") matches nothing: use `memory_overview`.
+
+## memory_overview()
+
+General picture of what is remembered. Returns `total_active`, `by_category` (counts),
+`recent` (the three most recently updated memories, same fields as `recall`),
+`due_for_review`, `pending`, `historical`, and `spoken_summary` (speakable, second person,
+e.g. "I remember 10 things about you, including that ... One of them may need updating.").
 
 ## propose_memory(fact, category="other", review_in_days?)
 
