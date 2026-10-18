@@ -104,7 +104,9 @@ class AuthSettings:
             if not settings.oauth_enabled:
                 raise SystemExit("Refusing to listen publicly without OAuth (OAUTH_CLIENT_ID, "
                                  "OAUTH_CLIENT_SECRET, OAUTH_REDIRECT_URIS, OWNER_PASSPHRASE_HASH).")
-            if not settings.resource.startswith("https://"):
+            loopback_resource = urlsplit(settings.resource).hostname in LOCAL_HOSTS
+            if not settings.resource.startswith("https://") and not loopback_resource:
+                # (a container tested on this machine may bind 0.0.0.0 with a loopback URI)
                 raise SystemExit("MCP_RESOURCE_URI must be https:// when listening publicly.")
         return settings
 

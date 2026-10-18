@@ -1,0 +1,11 @@
+.git
+.venv
+.oauth
+.pytest_cache
+**/__pycache__
+*.tmp
+.env
+service-account*.json
+proof/
+tests/
+.claude/

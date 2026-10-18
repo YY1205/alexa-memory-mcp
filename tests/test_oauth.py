@@ -374,8 +374,11 @@ def test_public_host_requires_oauth_and_https(tmp_path, monkeypatch):
         oauth_mod.AuthSettings.from_env("0.0.0.0", 8000, tmp_path)
     for key, value in oauth_env(tmp_path, 8000).items():
         monkeypatch.setenv(key, value)
+    monkeypatch.setenv("MCP_RESOURCE_URI", "http://memory.example.com/mcp")
     with pytest.raises(SystemExit, match="https"):
         oauth_mod.AuthSettings.from_env("0.0.0.0", 8000, tmp_path)
+    monkeypatch.setenv("MCP_RESOURCE_URI", "http://127.0.0.1:8000/mcp")  # local container test
+    assert oauth_mod.AuthSettings.from_env("0.0.0.0", 8000, tmp_path).oauth_enabled
     monkeypatch.setenv("MCP_RESOURCE_URI", "https://memory.example.com/mcp")
     monkeypatch.setenv("MCP_BEARER_TOKEN", "dev")
     with pytest.raises(SystemExit, match="localhost development only"):
