@@ -1,0 +1,13 @@
+# 2026-10-18T21:08:13Z | from this Mac (macOS, home internet) to the public server in AWS us-east-1 | OAuth access token
+# round-trip times INCLUDE the internet path, TLS and the load balancer; server-side tool time is ~1-2 ms (proof/latency-local.txt)
+$ python scripts/bench.py <server>/mcp --token *** -n 50
+Round-trip latency per tool call, https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp, n=50 iterations
+tool / resource    calls    p50 ms    p95 ms    max ms  p95<500ms
+recall                50      72.5      73.7      74.0  PASS
+list_due_reviews      50      72.5      74.0      74.3  PASS
+propose_memory        50      74.7      77.4      81.7  PASS
+confirm_memory       100      74.2      78.2     140.1  PASS
+supersede_memory      50      74.3      76.3     101.3  PASS
+resolve_review        50      74.0      84.1     123.4  PASS
+read memories.md      50      74.0     105.2     147.0  PASS
+# exit code: 0

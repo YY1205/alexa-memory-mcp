@@ -33,3 +33,18 @@ Python and printing every ARN before the call. Side effects, both harmless: the 
 role's trust policy lost the extra `aws:SourceAccount` condition (now the documented
 form), and three service-linked roles were created that turned out not to be needed for the
 fix. The inline policies written in 5.4 were checked and are correct.
+
+## Verification (Oct 18, after deploy)
+
+| Check | Result | Proof |
+|---|---|---|
+| Rollout | both services 1/1 running, deployments COMPLETED; updated revision serves the https resource URI | |
+| 401 without token, no `WWW-Authenticate` | PASS (HTTP/2 401, body has `error`, `error_description`, `message`) | proof/inspector-tools-list-public.txt |
+| Protected resource + authorization server metadata | PASS (resource `https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp`, S256, no registration endpoint) | |
+| /privacy (contact), /terms, /addon-assets (6 icons + carousel) | PASS | |
+| Simulator health, passcode gate, API behind the gate | PASS | |
+| MCP Inspector tools/list with an OAuth token | PASS (6 tools) | proof/inspector-tools-list-public.txt |
+| Latency from this Mac (incl. internet) | p95 74-105 ms per tool | proof/latency-public.txt |
+| Conversations 1-5 through the public simulator, Nova Pro | 5/5 PASS; MCP 6-15 ms per call inside AWS; model 1.1-2.0 s per turn | proof/public-conversations.txt |
+
+The public simulator was left linked and reset to Sam's seed for the judges.

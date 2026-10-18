@@ -20,9 +20,9 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 
 | Requirement | Status | Where | Evidence |
 |---|---|---|---|
-| Streamable HTTP transport | Pass | `server.py`, `build_app` (`streamable_http_app`, `/mcp`) | Test `tests/test_memory.py::test_full_voice_flow_over_http`; Proof `proof/inspector-tools-list-oauth.txt` (MCP Inspector over Streamable HTTP) |
+| Streamable HTTP transport | Pass | `server.py`, `build_app` (`streamable_http_app`, `/mcp`) | Test `tests/test_memory.py::test_full_voice_flow_over_http`; Proof `proof/inspector-tools-list-oauth.txt`, and against the public HTTPS deployment `proof/inspector-tools-list-public.txt` |
 | MCP spec 2025-11-25 or later | Pass | `requirements.txt` (`mcp>=2.3,<3`) | Test `test_full_voice_flow_over_http` (negotiates 2026-07-28 ≥ 2025-11-25); Test `tests/test_oauth.py::test_client_asking_for_2025_11_25_gets_it` |
-| Round-trip tool latency < 500 ms | Pass (local) | `memory/cache.py` (reads from memory, Drive write-behind); no LLM in the server | Test `tests/test_latency.py` (p95 < 500 ms per tool and the memory resource, with OAuth on and a 1 s storage save); Proof `proof/latency-local.txt` (p95 ≤ 1.7 ms); with real Google Drive `proof/latency-drive.txt` (p95 ≤ 2.2 ms while 14 uploads ran) |
+| Round-trip tool latency < 500 ms | Pass (local) | `memory/cache.py` (reads from memory, Drive write-behind); no LLM in the server | Test `tests/test_latency.py` (p95 < 500 ms per tool and the memory resource, with OAuth on and a 1 s storage save); Proof `proof/latency-local.txt` (p95 ≤ 1.7 ms); with real Google Drive `proof/latency-drive.txt` (p95 ≤ 2.2 ms while 14 uploads ran); public HTTPS deployment from a home connection `proof/latency-public.txt` (p95 74-105 ms incl. ~70 ms internet round trip) |
 | Standard MCP results; Alexa+ does NLU and response generation | Pass | `server.py` tools return plain JSON; read-back sentences are written for speech (`memory/speech.py`) | Test `tests/test_latency.py::test_server_never_imports_boto3` (no model in the request path) |
 
 ## Authentication checklist
@@ -88,8 +88,7 @@ mediaAssets.carouselImages, mediaAssets.bannerImages}`, `integrations[].type = "
 come from the same page. Open questions, to settle with `alexa-ai new mcp` once we have
 partner access:
 
-1. **Host**: `https://portable-memory.example.com` is a placeholder; run
-   `python scripts/make_addon.py --base-url https://<deployed host>`.
+1. **Host**: now the public demo (`https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws`); it changes if the service is re-created.
 2. **`accountLinking.enabled`**: the account-linking doc says `alexa-ai new` writes it into
    the manifest, but no example shows where. We left it out rather than guess.
 3. **`size` format**: the example uses strings; we assume `"72x72"`-style values.
@@ -106,9 +105,9 @@ partner access:
 
 | Item | Status |
 |---|---|
-| Deployment with HTTPS (AWS App Runner), `MCP_RESOURCE_URI=https://…/mcp`, `ALLOWED_HOSTS` | Planned Oct 20 |
-| Persist `.oauth/tokens.json` across deploys (volume or secret-backed store) | To do with deployment |
-| Regenerate `addon.json` with the deployed host; `alexa-ai deploy` / `submit` | Needs partner access |
-| Set `PRIVACY_CONTACT` (shown on /privacy and /terms) | To do before publishing |
+| Deployment with HTTPS | **Done Oct 18**: ECS Express Mode, `https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp` (until Nov 21) |
+| Persist `.oauth/tokens.json` across deploys | Not done by design for the demo: a restart resets memory and links (docs/DEPLOY-PLAN.md) |
+| `addon.json` with the deployed host | Done (make_addon.py); `alexa-ai deploy` / `submit` need partner access |
+| `PRIVACY_CONTACT` on /privacy and /terms | Done |
 | Register Alexa's redirect URIs and client credentials (`alexa-ai configure-account-linking`) | Needs partner access |
 | End-to-end test with real Alexa+ (account linking and tool calls) | Blocked: Alexa AI CLI / MCP Toolkit / devices are partner-gated |

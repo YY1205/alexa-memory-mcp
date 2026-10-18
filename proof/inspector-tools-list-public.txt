@@ -1,0 +1,177 @@
+# 2026-10-18T21:08:11Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, OAuth 2.1)
+# token: OAuth access token from scripts/oauth_token.py (auth code + PKCE S256 + resource), redacted below
+
+$ curl -i -X POST <server>/mcp   # no token
+HTTP/2 401 
+content-type: application/json
+{"error":"invalid_token","error_description":"A valid access token is required.","message":"A valid access token is required."}
+# (no WWW-Authenticate header above)
+
+$ npx @modelcontextprotocol/inspector --cli <server>/mcp --method tools/list --header "Authorization: Bearer ***"
+{
+  "tools": [
+    {
+      "name": "recall",
+      "description": "Look up what the user has asked you to remember. Use whenever the user asks\nabout themselves, their plans, preferences or past decisions (\"what did I say\nabout...\", \"when is my...\"). Returns current memories only; phrase the spoken\nanswer from them. category is optional: profile, preference, active_context,\nproject, decision, other.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Category"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "recallArguments"
+      }
+    },
+    {
+      "name": "propose_memory",
+      "description": "Prepare to save a new fact the user wants remembered. Does NOT save yet:\nread confirmation_prompt to the user as given, then call confirm_memory with\ntheir answer. If the result includes `replaces`, the fact looks like an update\nto that existing memory; pass replaces=<that id> to confirm_memory if the user\nagrees. Write fact as a full sentence about the user in third person (\"The\nuser's dentist appointment is on Friday.\"). Set review_in_days for temporary\nfacts (plans, deadlines, ongoing situations) so they get re-checked later.\nProposing the same fact again replaces the earlier unconfirmed proposal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fact": {
+            "title": "Fact",
+            "type": "string"
+          },
+          "category": {
+            "default": "other",
+            "title": "Category",
+            "type": "string"
+          },
+          "review_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Review In Days"
+          }
+        },
+        "required": [
+          "fact"
+        ],
+        "title": "propose_memoryArguments"
+      }
+    },
+    {
+      "name": "supersede_memory",
+      "description": "Prepare to replace a specific memory you already know the id of, when the\nuser corrects it. The old memory is kept as history, not deleted. Does NOT\nsave yet: read confirmation_prompt to the user, then call confirm_memory. For\nnew facts that might update an old one, use propose_memory instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "old_memory_id": {
+            "title": "Old Memory Id",
+            "type": "string"
+          },
+          "new_fact": {
+            "title": "New Fact",
+            "type": "string"
+          }
+        },
+        "required": [
+          "old_memory_id",
+          "new_fact"
+        ],
+        "title": "supersede_memoryArguments"
+      }
+    },
+    {
+      "name": "confirm_memory",
+      "description": "Finish a propose_memory or supersede_memory call with the user's answer:\nconfirmed=true saves it, false discards it. replaces: the id from\npropose_memory's `replaces` when the user agreed to the update; the old\nmemory is then kept as history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pending_id": {
+            "title": "Pending Id",
+            "type": "string"
+          },
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "replaces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Replaces"
+          }
+        },
+        "required": [
+          "pending_id",
+          "confirmed"
+        ],
+        "title": "confirm_memoryArguments"
+      }
+    },
+    {
+      "name": "list_due_reviews",
+      "description": "List temporary memories whose review date has passed, so you can ask the\nuser whether each one is still true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "title": "list_due_reviewsArguments"
+      }
+    },
+    {
+      "name": "resolve_review",
+      "description": "Record the user's answer to \"is this still true?\". still_true=false retires\nthe memory (kept as history). Optionally schedule the next check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {
+            "title": "Memory Id",
+            "type": "string"
+          },
+          "still_true": {
+            "title": "Still True",
+            "type": "boolean"
+          },
+          "review_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Review In Days"
+          }
+        },
+        "required": [
+          "memory_id",
+          "still_true"
+        ],
+        "title": "resolve_reviewArguments"
+      }
+    }
+  ]
+}
+# exit code: 0

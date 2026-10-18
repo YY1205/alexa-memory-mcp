@@ -1,0 +1,44 @@
+# 2026-10-18T21:08:55+00:00 | public simulator https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws
+SUMMARY #1 PASS  #2 PASS  #3 PASS  #4 PASS  #5 PASS
+# brain bedrock us.amazon.nova-pro-v1:0 | server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp
+# linked the account through the server's sign-in page
+--- conversation 1
+  YOU: When is my sister's birthday?
+  ALEXA: Your sister Maya's birthday is on November 2.
+     tools: recall | MCP 7 ms | model 1499 ms
+  RESULT: PASS
+--- conversation 2
+  YOU: Remember that my dentist appointment is Friday at 3.
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3?
+     tools: propose_memory | MCP 7 ms | model 1395 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | MCP 10 ms | model 1252 ms
+  RESULT: PASS
+--- conversation 3
+  YOU: The kitchen contractor now starts on the 27th.
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 24. Should I change it to: the kitchen contractor now starts on the 27th?
+     tools: propose_memory | MCP 7 ms | model 1536 ms
+  YOU: Yes.
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory | MCP 15 ms | model 1321 ms
+  RESULT: PASS
+--- conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: list_due_reviews | MCP 6 ms | model 1406 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got the job at a design studio and start in November?
+     tools: resolve_review, propose_memory | MCP 11, 6 ms | model 1978 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | MCP 10 ms | model 1175 ms
+  RESULT: PASS
+--- conversation 5
+  YOU: Remember that I hate jazz.
+  ALEXA: Should I remember that you hate jazz?
+     tools: propose_memory | MCP 7 ms | model 1084 ms
+  YOU: No.
+  ALEXA: Okay, I won't remember that.
+     tools: confirm_memory | MCP 14 ms | model 1180 ms
+  RESULT: PASS

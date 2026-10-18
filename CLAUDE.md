@@ -89,8 +89,15 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
   `scripts/drive_smoke.py` is the manual real-Drive check). Demo reset overwrites the
   Drive file only when explicitly triggered.
   * Oct 17: Agent Skill, addon.json draft, icons, privacy/terms. Done (early, Oct 16).
-  * Oct 20: deploy (then regenerate addon.json with the real host). Oct 21: polish/docs.
-    Oct 22: video + submit.
+  * Oct 20: deploy. **Done early, Oct 18**: ECS Express Mode, simulator https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws,
+    server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws. Teardown **Nov 21, 2026** (docs/DEPLOY-PLAN.md section 7).
+    Oct 21: polish/docs. Oct 22: video + submit.
+- Public deployment rules: run only commands in an approved plan; never print secrets
+  (judge passcode + demo owner passphrase live in ~/.config/alexa-memory-mcp/demo-secrets.txt);
+  record every created resource in docs/DEPLOY-LOG.md. **zsh**: write `${ACCOUNT}` with
+  braces in ARNs (`$ACCOUNT:r`/`:u` are modifiers that silently mangle `:role/` / `:user/`).
+  Redeploy = build arm64 image, push to ECR (then `docker logout`), update-express-gateway-service.
+  A restart resets the demo memory and OAuth links (ephemeral by design).
 
 ## Working rules
 

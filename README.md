@@ -9,6 +9,18 @@ owns it.
 
 Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (2026).
 
+## Live demo (until Nov 21, 2026)
+
+| | |
+|---|---|
+| Simulated Alexa+ (judges start here) | https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws |
+| Portable Memory MCP server | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp |
+| Privacy policy / terms | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/privacy, https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/terms |
+
+Step-by-step instructions for judges: [docs/TESTING.md](docs/TESTING.md) (the passcode and
+the demo owner passphrase are in the private Devpost testing instructions). Hosted on AWS
+ECS Express Mode; see [docs/DEPLOY-PLAN.md](docs/DEPLOY-PLAN.md).
+
 ## Why voice needs different memory rules
 
 | Problem | What this server does |
@@ -155,7 +167,12 @@ See `.env.example`.
   - Manual check: `scripts/bedrock_smoke.py` → `proof/bedrock-smoke.txt`.
 * The MCP server itself never calls Bedrock (keeps tool calls < 500 ms; enforced by
   `tests/test_latency.py::test_server_never_imports_boto3`).
-* Deployment target: AWS App Runner (container): *to be documented*
+* **Deployment**: Amazon ECS Express Mode (Fargate ARM64 + Application Load Balancer with
+  ACM certificates), images in Amazon ECR, secrets in AWS Systems Manager Parameter Store
+  (SecureString), logs in CloudWatch, cost guard in AWS Budgets. The simulator's task role
+  may only call `bedrock:InvokeModel` on Nova Pro; no static AWS keys anywhere.
+  Plan, costs and teardown: [docs/DEPLOY-PLAN.md](docs/DEPLOY-PLAN.md); what was created:
+  [docs/DEPLOY-LOG.md](docs/DEPLOY-LOG.md).
 
 ## Layout
 
