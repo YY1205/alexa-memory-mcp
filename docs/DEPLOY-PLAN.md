@@ -1,6 +1,9 @@
 # Deploy plan: public HTTPS for the judges (Oct 18-19, 2026)
 
-Status: **PLAN, awaiting approval.** No AWS resource is created until it is approved.
+Status: **APPROVED Oct 17** (ECS Express Mode; Colima + Docker for local ARM64 builds;
+$80/month budget with e-mail alerts at 80 % actual and 100 % forecasted; limits as
+proposed; teardown on **Nov 21, 2026**, the day after judging ends). Code changes (section 4)
+are done and tested locally, including the container.
 After approval only the commands in section 5 are run; anything else is asked first.
 AWS credentials are never printed or stored; values below in `<...>` are filled in at run
 time from command output (ids, URLs), never from secrets.
@@ -62,7 +65,8 @@ press *Reset demo* (behind the passcode) to restore Sam. Documented in docs/TEST
 | Bedrock Nova Pro | ~3-4k input + ~100 output tokens per model call; capped at 300 calls/day (section 4) | 0-~30 worst case, likely < 2 |
 | **Total** | | **~$48-65 (likely ~$50)** |
 
-Judging window Oct 19 - Dec 3 (about 1.5 months): **~$75-100**. Nova Pro per-token
+Running Oct 19 - Nov 21 (33 days, about 1.1 months): **~$55-70**, plus Bedrock usage
+(capped). Nova Pro per-token
 prices to be confirmed with `aws pricing get-products` after `aws login`. A smaller bill is
 possible later by putting the simulator inside the server's service (one task, one public
 IP) or by moving to EC2 + Caddy; not proposed now.
@@ -88,13 +92,23 @@ IP) or by moving to EC2 + Caddy; not proposed now.
 3. **Server behind the ALB**: rate-limit sign-ins by the *rightmost* `X-Forwarded-For`
    entry (the one the ALB adds; today we take the leftmost, which a client can forge).
 4. **PRIVACY_CONTACT** set from your answer (question 3 below).
+5. **No secrets in logs**: access logs drop query strings (OAuth codes), see `logsafe.py`.
+
+Status: 1-5 done; tested with `pytest` (131 passed) and with both containers running
+locally (Colima, arm64): health checks, 401 without `WWW-Authenticate`, metadata, pages,
+assets, passcode gate, account linking, conversations 1-5 (scripted brain), Reset; no
+secrets in container logs.
 
 ## 5. AWS commands (run only after approval, in this order)
 
 Names: prefix `alexa-memory`, region `us-east-1`, tag `project=alexa-memory-mcp` on
 everything that takes tags. `<ACCOUNT>` comes from `aws sts get-caller-identity`.
 
-**5.0 Read-only checks**: `aws sts get-caller-identity` (must be the IAM user, not root),
+**5.0 Read-only checks**: `aws sts get-caller-identity` (must be the IAM user, not root;
+stop if root), billing: `aws freetier get-account-plan-state` (Free vs Paid plan; a Free
+plan may restrict services and closes the account after 6 months or when credits run
+out), `aws budgets describe-budgets --account-id <ACCOUNT>` (show any existing budget
+before adding one),
 `aws bedrock get-inference-profile --inference-profile-identifier us.amazon.nova-pro-v1:0`
 (to list the model ARNs it routes to), `aws ec2 describe-vpcs --filters Name=is-default,Values=true`
 and `describe-subnets` (default VPC with >= 2 public subnets), `aws pricing get-products`
@@ -151,8 +165,10 @@ pm-server with `MCP_RESOURCE_URI=https://<server-domain>/mcp`, `ALLOWED_HOSTS=<s
 
 **5.7 Logs**: `aws logs put-retention-policy --retention-in-days 14` on both service log groups.
 
-**5.8 Optional cost guard** (decision 4): `aws budgets create-budget` at $80/month with an
-e-mail alert at 80 %.
+**5.8 Cost guard**: `aws budgets create-budget --account-id <ACCOUNT>` named
+`alexa-memory-mcp`, $80/month COST budget, with two e-mail notifications to <your e-mail>:
+ACTUAL > 80 % and FORECASTED > 100 %. If a budget already exists, it is shown to you first
+(5.0) and nothing is added without your OK.
 
 ## 6. Verification after deploy (no new resources)
 
@@ -168,7 +184,7 @@ e-mail alert at 80 %.
   pointed at the public server, plus one manual run in the browser).
 * Docs: docs/TESTING.md for judges, README live URLs, ALEXA-READINESS, CLAUDE.md, FRICTION_LOG.
 
-## 7. Teardown after judging (results ~Dec 3)
+## 7. Teardown on Nov 21, 2026 (judging ends Nov 20)
 
 ```bash
 aws ecs delete-express-gateway-service --service-arn <pm-sim arn>
@@ -201,12 +217,9 @@ during deployment so teardown can be copied.
 
 ## 8. Decisions needed from you
 
-1. **Hosting**: ECS Express Mode (recommended, ~$50/month) or EC2 + Caddy (~$17/month,
-   more to operate, needs a DNS name)?
-2. **Building the image**: this Mac has no Docker. Either install **Colima + Docker CLI with
-   Homebrew** (free, local, recommended), or build in **AWS CodeBuild** (one more AWS
-   resource and an S3 source bucket).
-3. **PRIVACY_CONTACT**: the contact shown on /privacy and /terms (an e-mail or URL).
-4. **Budget alert**: create an $80/month AWS Budget with an e-mail alert? If yes, which e-mail?
-5. **Limits**: OK with 10 utterances/min and 120/day per IP, 60/min global, 300 Bedrock calls/day?
-6. **Run `aws login`** before approval: the CLI session has expired again.
+1. **Hosting**: ECS Express Mode. *(answered)*
+2. **Building the image**: Colima + Docker CLI via Homebrew, ARM64 locally. *(answered, installed)*
+3. **PRIVACY_CONTACT**: still needed: the answer contained a template placeholder, not an address.
+4. **Budget alert**: yes, $80/month; the alert e-mail is still needed (placeholder in the answer).
+5. **Limits**: as proposed. *(answered)*
+6. **`aws login`**: the CLI still reported an expired session on Oct 18; needed before 5.0.
