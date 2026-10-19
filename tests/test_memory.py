@@ -153,6 +153,48 @@ def test_overview_of_an_empty_memory(tmp_path):
     assert "note" not in empty.recall("anything")
 
 
+# ---------- export ----------
+
+def test_export_defaults_to_active_memories_grouped_without_internals(service):
+    p = service.propose("The user hates jazz.", "preference")            # pending: never exported
+    s = service.propose("The user now lives in Seattle.", supersedes="MEM-0001")
+    service.confirm(s["pending_id"], True)                                # MEM-0001 -> historical
+    out = service.export()
+    md = out["markdown"]
+    assert md.startswith("# Portable Memory export\n")
+    assert "chose to share" in md and "confirmed by the owner" in md and "out of date after" in md
+    assert "Shared: everything. 10 memories." in md and out["count"] == 10
+    assert "jazz" not in md and "Portland" not in md and "Seattle" in md   # pending / historical out
+    assert "MEM-" not in md and "pending" not in md and "source_type" not in md and "the user" not in md.lower()
+    assert md.index("## About the owner") < md.index("## Preferences") < md.index("## Decisions")
+    assert "- The owner's sister Maya's birthday is on November 2. (last confirmed " in md
+    assert "Previously true" not in md
+    del p
+
+
+def test_export_category_filter_topic_and_history(service):
+    s = service.propose("The user's dog Pepper needs his pill on the first day of each month.",
+                        supersedes="MEM-0009")
+    service.confirm(s["pending_id"], True)
+    prefs = service.export(["preference"])
+    assert prefs["count"] == 2 and "## Preferences" in prefs["markdown"]
+    assert "About the owner" not in prefs["markdown"] and "Maya" not in prefs["markdown"]
+    food = service.export(["preference"], topic="food")
+    assert food["count"] == 1 and "vegetarian" in food["markdown"] and "morning" not in food["markdown"]
+    assert food["spoken_summary"] == "Your memory export is ready: 1 memory about food."
+    hist = service.export(["profile"], include_history=True)
+    assert "## Previously true" in hist["markdown"] and "Biscuit" in hist["markdown"].split("Previously true")[1]
+    assert hist["history_count"] == 1
+
+
+def test_export_is_stable_and_rejects_unknown_categories(service):
+    assert service.export()["markdown"] == service.export()["markdown"]
+    assert service.export(["preference", "profile"])["markdown"] == service.export(["preference", "profile"])["markdown"]
+    with pytest.raises(MemoryError_):
+        service.export(["passwords"])
+    assert "Nothing matched" in service.export(["preference"], topic="spaceships")["markdown"]
+
+
 def test_supersede_keeps_history(service):
     p = service.propose("The user now lives in Seattle.", supersedes="MEM-0001")
     service.confirm(p["pending_id"], True)
@@ -194,8 +236,8 @@ def test_full_voice_flow_over_http(http_server):
         async with Client(streamable_http_client(f"{http_server}/mcp", http_client=http)) as c:
             assert c.protocol_version >= "2025-11-25"  # Alexa+ requires 2025-11-25 or later
             tools = {t.name for t in (await c.list_tools()).tools}
-            assert tools == {"recall", "memory_overview", "propose_memory", "supersede_memory",
-                             "confirm_memory", "list_due_reviews", "resolve_review"}
+            assert tools == {"recall", "memory_overview", "export_memory", "propose_memory",
+                             "supersede_memory", "confirm_memory", "list_due_reviews", "resolve_review"}
             p = await c.call_tool("propose_memory", {"fact": "The user parks on level 3 at work.",
                                                      "category": "other"})
             pending = json.loads(p.content[0].text)

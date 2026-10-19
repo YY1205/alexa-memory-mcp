@@ -340,7 +340,8 @@ def test_read_only_token_cannot_write(client):
     ep, verifier, params = start_link(client, scopes=["memory.read"])
     tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
     assert tokens.scope == "memory.read"
-    for tool, args in [("recall", {"query": "sister"}), ("list_due_reviews", {}), ("memory_overview", {})]:
+    for tool, args in [("recall", {"query": "sister"}), ("list_due_reviews", {}), ("memory_overview", {}),
+                       ("export_memory", {"categories": ["preference"]})]:
         assert "insufficient_scope" not in call_tool(client, tokens.access_token, tool, args).text
     for tool, args in [("propose_memory", {"fact": "The user hates jazz."}),
                        ("supersede_memory", {"old_memory_id": "MEM-0001", "new_fact": "x"}),
@@ -356,12 +357,26 @@ def test_read_only_token_cannot_write(client):
 def test_write_only_token_cannot_read(client):
     ep, verifier, params = start_link(client, scopes=["memory.write"])
     tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
-    for tool, args in [("recall", {"query": "sister"}), ("memory_overview", {})]:
+    for tool, args in [("recall", {"query": "sister"}), ("memory_overview", {}), ("export_memory", {})]:
         assert "insufficient_scope: memory.read required" in call_tool(client, tokens.access_token, tool, args).text
     r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {tokens.access_token}"},
                     json={"jsonrpc": "2.0", "id": 1, "method": "resources/read",
                           "params": {"uri": "memory://memories.md"}})
     assert "MEM-0004" not in r.text
+    r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {tokens.access_token}"},
+                    json={"jsonrpc": "2.0", "id": 2, "method": "resources/read",
+                          "params": {"uri": "memory://export.md"}})
+    assert "vegetarian" not in r.text  # the export resource needs memory.read too
+
+
+def test_export_resource_serves_the_full_export(client):
+    ep, verifier, params = start_link(client, scopes=["memory.read"])
+    tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
+    r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {tokens.access_token}"},
+                    json={"jsonrpc": "2.0", "id": 1, "method": "resources/read",
+                          "params": {"uri": "memory://export.md"}})
+    text = r.json()["result"]["contents"][0]["text"]
+    assert text.startswith("# Portable Memory export") and "Shared: everything. 10 memories." in text
 
 
 # ---------------------------------------------------------------- deployment guards

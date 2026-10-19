@@ -52,6 +52,9 @@ Voice rules:
 - For general questions about what you remember ("What do you know about me?",
   "Do you have any memory of me?"), call memory_overview. Never tell the user you have
   no memory of them unless memory_overview (or recall's total_active) says 0.
+- To share memory with someone else or another assistant, call export_memory with only
+  what the user asked for (categories and/or topic). Say its spoken_summary; never read
+  the exported file aloud.
 - Memories are written about "the user" in the third person; speak to the user in
   the second person. Keep spoken answers short. Do not read ids aloud.
 """
@@ -117,6 +120,17 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
         return safe(READ, service.overview)
 
     @mcp.tool()
+    def export_memory(categories: list[str] | None = None, include_history: bool = False,
+                      topic: str | None = None) -> dict:
+        """Make a shareable Markdown snapshot of the user's memory that they can download
+        or paste into another AI assistant or send to a friend. Read-only. Share only what
+        the user asked for: categories (profile, preference, active_context, project,
+        decision, other; default all) and/or topic (keywords, e.g. "food"). Active
+        memories only; include_history adds a "Previously true" section. Returns
+        markdown and spoken_summary: say the summary, never read the file aloud."""
+        return safe(READ, service.export, categories, include_history, topic)
+
+    @mcp.tool()
     def propose_memory(fact: str, category: str = "other", review_in_days: int | None = None) -> dict:
         """Prepare to save a new fact the user wants remembered. Does NOT save yet:
         read confirmation_prompt to the user as given, then call confirm_memory with
@@ -167,6 +181,14 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
     def memory_file() -> str:
         require_scope(READ)
         return service.export_markdown()
+
+    @mcp.resource("memory://export.md", name="export.md", title="Shareable memory export",
+                  description="The latest full export: active memories as plain sentences, for "
+                              "sharing with people or other AI assistants.",
+                  mime_type="text/markdown")
+    def memory_export() -> str:
+        require_scope(READ)
+        return service.export()["markdown"]
 
     if os.getenv("DEMO_ADMIN") == "1":
         # Demo helper: restore the fictional persona. Off by default. Callers from this

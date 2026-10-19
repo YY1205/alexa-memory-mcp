@@ -139,7 +139,7 @@ def test_memory_resource_advertises_the_drive_link(drive, tmp_path, monkeypatch)
         r = c.post("/mcp", headers={"Accept": "application/json, text/event-stream",
                                     "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25"},
                    json={"jsonrpc": "2.0", "id": 1, "method": "resources/list"})
-    resource = r.json()["result"]["resources"][0]
+    resource = next(x for x in r.json()["result"]["resources"] if x["uri"] == "memory://memories.md")
     assert resource["_meta"]["webViewLink"] == "https://drive.google.com/file/d/file-1/view"
     assert resource["_meta"]["backend"] == "google-drive"
     cache.close()

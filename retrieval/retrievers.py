@@ -32,6 +32,11 @@ def _tokens(text: str) -> set[str]:
     return {w.rstrip("s") for w in words if w not in _STOP and len(w) > 1}
 
 
+def topic_tokens(text: str) -> set[str]:
+    """Search words of a text (stop words dropped, crude stemming)."""
+    return _tokens(text)
+
+
 def _topic(text: str) -> set[str]:
     return {t for t in _tokens(text) if t.rstrip("s") not in _DATEISH and t not in _DATEISH
             and not _NUMBER.fullmatch(t)}

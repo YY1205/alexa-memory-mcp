@@ -12,13 +12,22 @@ import re
 import threading
 from datetime import date, datetime, timedelta, timezone
 
-from retrieval.retrievers import KeywordRetriever, Retriever, strong_match
+from retrieval.retrievers import KeywordRetriever, Retriever, strong_match, topic_tokens
 
 from .schema import CATEGORIES, MemoryRecord, now_iso, to_markdown
 from .speech import clause
 from .store import MemoryStore
 
 PENDING_TTL = timedelta(hours=24)
+# Category headings in a shared export, in this order.
+EXPORT_HEADINGS = {
+    "profile": "About the owner",
+    "preference": "Preferences",
+    "active_context": "Current plans and situations",
+    "project": "Projects",
+    "decision": "Decisions",
+    "other": "Other",
+}
 
 
 class MemoryError_(ValueError):
@@ -116,6 +125,71 @@ class MemoryService:
         due = [r for r in self.store.load() if r.is_due_for_review(today)]
         due.sort(key=lambda r: r.review_after or "")
         return {"count": len(due), "memories": [r.to_public() for r in due]}
+
+    # ---------- export (shareable snapshot) ----------
+    @staticmethod
+    def _owner_sentence(fact: str) -> str:
+        """Stored facts say "the user"; a shared file says "the owner"."""
+        out = re.sub(r"\bthe user's\b", "the owner's", fact, flags=re.I)
+        out = re.sub(r"\bthe user\b", "the owner", out, flags=re.I)
+        out = out.strip()
+        return out[0].upper() + out[1:] if out else out
+
+    def export(self, categories: list[str] | None = None, include_history: bool = False,
+               topic: str | None = None) -> dict:
+        """A Markdown snapshot the owner can share with people or other AI assistants.
+
+        Active memories only (plus a "Previously true" section if include_history),
+        grouped by category, as plain sentences with their last-confirmed date. No ids,
+        no pending records, no internal fields. `categories` and `topic` (keywords
+        matched against facts and tags) narrow what is shared.
+        """
+        wanted = [c for c in (categories or EXPORT_HEADINGS) if c in EXPORT_HEADINGS]
+        if categories and not wanted:
+            raise MemoryError_(f"I don't know those categories. Use: {', '.join(EXPORT_HEADINGS)}.")
+        records = [r for r in self.store.load() if r.category in wanted]
+        if topic and topic.strip():
+            topic_words = topic_tokens(topic)
+            records = [r for r in records if topic_words & topic_tokens(f"{r.fact} {' '.join(r.tags)}")]
+        active = sorted((r for r in records if r.status == "active"), key=lambda r: r.id)
+        history = sorted((r for r in records if r.status == "historical"), key=lambda r: r.id) \
+            if include_history else []
+        exported_on = self._today().isoformat()
+        scope = ", ".join(EXPORT_HEADINGS[c] for c in wanted) if categories else "everything"
+        if topic and topic.strip():
+            scope += f" (topic: {topic.strip()})"
+        lines = [
+            "# Portable Memory export",
+            "",
+            f"> A memory export that its owner chose to share, exported on {exported_on}.",
+            "> Use it as context about the owner: every fact below was confirmed by the owner.",
+            f"> It may be out of date after {exported_on}.",
+            "",
+            f"Shared: {scope}. {len(active)} {'memory' if len(active) == 1 else 'memories'}.",
+        ]
+        for category in wanted:
+            items = [r for r in active if r.category == category]
+            if items:
+                lines += ["", f"## {EXPORT_HEADINGS[category]}", ""]
+                lines += [f"- {self._owner_sentence(r.fact)} (last confirmed {r.updated_at[:10]})"
+                          for r in items]
+        if history:
+            lines += ["", "## Previously true", "", "No longer current; kept as history.", ""]
+            lines += [f"- {self._owner_sentence(r.fact)} (until {r.updated_at[:10]})" for r in history]
+        if not active and not history:
+            lines += ["", "_Nothing matched what was chosen for sharing._"]
+        markdown = "\n".join(lines) + "\n"
+        what = f"{len(active)} {'memory' if len(active) == 1 else 'memories'}"
+        about = f" about {topic.strip()}" if topic and topic.strip() else (
+            f" ({scope})" if categories else "")
+        return {
+            "markdown": markdown,
+            "count": len(active),
+            "history_count": len(history),
+            "categories": wanted,
+            "exported_on": exported_on,
+            "spoken_summary": f"Your memory export is ready: {what}{about}.",
+        }
 
     # ---------- write (two-step) ----------
     @staticmethod

@@ -4,8 +4,9 @@ Starts nothing itself: point it at a running server.
 
     python scripts/bench.py http://127.0.0.1:8000/mcp --token "$TOKEN" -n 50
 
-Each iteration calls all seven tools with the official MCP Python client:
-recall, memory_overview, list_due_reviews, propose_memory + confirm_memory (creates a benchmark
+Each iteration calls all eight tools with the official MCP Python client:
+recall, memory_overview, export_memory,
+list_due_reviews, propose_memory + confirm_memory (creates a benchmark
 fact), supersede_memory + confirm_memory (discarded), resolve_review (retires the
 benchmark fact), and reads the memory file resource (memory://memories.md). It WRITES to the memory file, leaving one historical
 "Benchmark fact" record per iteration: run it against demo data only.
@@ -23,8 +24,8 @@ import anyio
 from mcp import Client
 from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
 
-TOOLS = ("recall", "memory_overview", "list_due_reviews", "propose_memory", "confirm_memory",
-         "supersede_memory", "resolve_review")
+TOOLS = ("recall", "memory_overview", "export_memory", "list_due_reviews", "propose_memory",
+         "confirm_memory", "supersede_memory", "resolve_review")
 MEMORY_URI = "memory://memories.md"
 RESOURCE_KEY = "read memories.md"  # timings key for resources/read
 
@@ -56,6 +57,7 @@ async def run_bench(url: str, token: str | None = None, n: int = 50) -> dict[str
             await call("recall", {"query": "when is my sister's birthday"})
             await call("list_due_reviews", {})
             await call("memory_overview", {})
+            await call("export_memory", {"categories": ["preference"], "include_history": True})
             p = await call("propose_memory", {"fact": f"Benchmark fact number {i}.", "category": "other"})
             await call("confirm_memory", {"pending_id": p["pending_id"], "confirmed": True})
             s = await call("supersede_memory", {"old_memory_id": p["pending_id"],
