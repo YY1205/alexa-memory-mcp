@@ -1,6 +1,6 @@
 # Privacy policy: Portable Memory
 
-*Hackathon prototype, last updated October 16, 2026. Not reviewed by a lawyer.*
+*Hackathon prototype, last updated October 18, 2026. Not reviewed by a lawyer.*
 
 Portable Memory gives a voice assistant a long-term memory that **you own**: a plain
 Markdown file in your own storage. This policy explains what data the Portable Memory
@@ -45,6 +45,11 @@ Contact: {{CONTACT}}
   replies.
 - **Google Drive.** Your file lives in Google's storage under your Google account and
   Google's policies. Drive keeps its own version history of the file.
+
+- **Exports.** When you ask for an export ("share my food preferences" or the Export button),
+  the server builds a Markdown file with only what you chose. It leaves the server only when
+  you download or copy it, and you decide who receives it. Once shared, the copy is outside
+  this service's control; the file says it may be out of date after its export date.
 
 Nothing is sold, shared for advertising, or used to train models by this project. There
 are no analytics or tracking cookies.

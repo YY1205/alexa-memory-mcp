@@ -35,6 +35,7 @@ ECS Express Mode; see [docs/DEPLOY-PLAN.md](docs/DEPLOY-PLAN.md).
 | Tool | Purpose |
 |---|---|
 | `recall(query, category?)` | Current memories relevant to a question (keyword search, served from memory); always reports `total_active` so "no match" never looks like "no memory" |
+| `export_memory(categories?, include_history?, topic?)` | A shareable Markdown snapshot (only what the user asked for) for people or other AI assistants; also the resource `memory://export.md` |
 | `memory_overview()` | General questions ("What do you know about me?"): counts per category, newest memories, how many need review, a speakable `spoken_summary` |
 | `propose_memory(fact, category, review_in_days?)` | Stage a new fact; returns a speakable `confirmation_prompt`, and `replaces` when it looks like an update to an existing memory |
 | `supersede_memory(old_memory_id, new_fact)` | Stage an explicit correction of a memory whose id is known |
@@ -73,6 +74,20 @@ Then open http://127.0.0.1:8001 in Chrome, click **Link account** and sign in on
 server's page with the owner passphrase the script prints (exactly like linking an account in
 the Alexa app; tokens stay in the simulator). The golden conversations are in
 [docs/demo-script.md](docs/demo-script.md).
+
+## Sharing your memory with other assistants
+
+**Today: export.** "Share my food preferences" (or the **Export** button in the memory
+panel) produces a short Markdown file: a preamble that says it's an owner-approved export
+and when it was made, then the chosen memories as plain sentences under category headings.
+No ids, no pending or internal fields, and only the categories/topic the owner picked. Paste
+it into any AI assistant or send it to a person; it's a **one-way snapshot**, readable by
+anything that reads text.
+
+**Roadmap: live sharing over MCP.** Because the memory is an MCP server with OAuth scopes,
+other assistants could link to the same file directly (read-only or read-write, per
+assistant), so a fact confirmed in one place is current everywhere. That multi-client work
+is out of scope for the hackathon.
 
 ## Agent Skill
 

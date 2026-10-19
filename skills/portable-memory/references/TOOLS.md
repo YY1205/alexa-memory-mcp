@@ -26,6 +26,20 @@ General picture of what is remembered. Returns `total_active`, `by_category` (co
 `due_for_review`, `pending`, `historical`, and `spoken_summary` (speakable, second person,
 e.g. "I remember 10 things about you, including that ... One of them may need updating.").
 
+## export_memory(categories?, include_history=false, topic?)
+
+A shareable Markdown snapshot (read-only). `categories` is a list from `profile`,
+`preference`, `active_context`, `project`, `decision`, `other` (default: all); `topic` is
+keywords matched against facts and tags (e.g. `"food"`); `include_history` adds a
+"Previously true" section.
+
+Returns `markdown` (a preamble saying it's an owner-approved export with its date, then the
+active memories as "The owner ..." sentences under category headings with their
+last-confirmed date; no ids, no pending records), `count`, `history_count`, `categories`,
+`exported_on`, and `spoken_summary` ("Your memory export is ready: 1 memory about food.").
+Unknown categories return an `error`. The latest full export is also the resource
+`memory://export.md`.
+
 ## propose_memory(fact, category="other", review_in_days?)
 
 Stage a fact. Nothing is saved yet.

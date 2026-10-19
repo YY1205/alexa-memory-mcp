@@ -1,6 +1,6 @@
 ---
 name: portable-memory
-description: Use the Portable Memory MCP server as a voice assistant's long-term memory that the user owns (a Markdown file in their own storage). Use when the user asks about themselves, their plans, preferences or past decisions, asks what you know or remember about them, tells you something to remember, corrects a fact, or asks what needs updating. Covers confirm-before-save, one-answer updates, corrections, reviews and how to speak results.
+description: Use the Portable Memory MCP server as a voice assistant's long-term memory that the user owns (a Markdown file in their own storage). Use when the user asks about themselves, their plans, preferences or past decisions, asks what you know or remember about them, tells you something to remember, corrects a fact, asks what needs updating, or wants to export or share their memory. Covers confirm-before-save, one-answer updates, corrections, reviews, exports and how to speak results.
 license: MIT
 compatibility: Any agent connected to the Portable Memory MCP server (tools recall, propose_memory, supersede_memory, confirm_memory, list_due_reviews, resolve_review).
 metadata:
@@ -76,6 +76,20 @@ still true?"
 - **Never say you have no memory of the user without checking.** If `recall` finds nothing
   but `total_active` is above 0, say you don't have anything *about that topic* (and offer
   what you do know via `memory_overview`), not that you know nothing.
+
+## Exporting and sharing
+
+`export_memory` makes a Markdown snapshot the user can download, send to someone, or paste
+into another AI assistant.
+
+- **Never export more than asked.** Map the request to `categories` and/or `topic`:
+  "share my food preferences" -> `categories: ["preference"], topic: "food"`; "export my
+  plans" -> `categories: ["active_context"]`; "export my memory" -> no filter.
+- If it's unclear what to include (e.g. "share some of my memory with my doctor"), ask which
+  topics or categories first; don't guess broad.
+- `include_history: true` only when the user asks for past or changed facts.
+- Say the result's `spoken_summary` (and where the file is, if your device shows it). Never
+  read the exported file aloud.
 
 ## More detail
 

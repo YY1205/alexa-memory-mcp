@@ -85,6 +85,20 @@ Keep both instead:
 
 > Assistant: Okay, I won't remember that.
 
+## Export only what was asked
+
+> User: Share my food preferences.
+
+`export_memory({"categories": ["preference"], "topic": "food"})` -> 1 memory ("The owner is
+vegetarian and does not eat fish."), not the other preferences.
+
+> Assistant: Your memory export is ready: 1 memory about food. It's on the screen, ready to download or copy.
+
+> User: Share some of my memory with my new doctor.
+
+Ambiguous: ask first, e.g. "Which parts should I include: your profile, preferences,
+or current plans?" Then export just those.
+
 ## The user edited the file by hand
 
 The file is the user's: they may change it in their own storage at any time. Always

@@ -9,7 +9,8 @@ for review, the kitchen contractor starts in 6 days, and the half marathon is 4 
 second person, so with Bedrock those questions are identical; other replies may be worded
 differently, but the tool calls and memory-file changes should match.
 
-Tests: `tests/test_simulator.py` runs conversations 0-6 end to end against a real server.
+Tests: `tests/test_simulator.py` runs conversations 0-7 end to end against a real server
+(the second half of 7 happens in another assistant).
 
 ## Setup
 
@@ -130,6 +131,22 @@ Run the demo on Google Drive (`MEMORY_BACKEND=drive ... scripts/run_demo.sh`, re
 - Offline the same thing works with the local file (`tests/test_simulator.py::
   test_conversation_6_hand_edit_is_used`).
 
+## 7. Share it with another assistant (about 30 s)
+
+| Speaker | Line |
+|---|---|
+| You | Share my food preferences. |
+| Alexa | Your memory export is ready: 1 memory about food. It's in the memory panel, ready to download or copy. |
+| (You) | In the memory panel, click **Copy** (or **Download .md**). |
+| (You) | Open a different AI assistant, paste the file, and ask: "I'm cooking dinner for this person tonight. Is grilled salmon a good idea?" |
+| Other AI | No: they're vegetarian and don't eat fish; suggest a vegetarian dish instead. |
+
+- Under the hood: `export_memory {"categories": ["preference"], "topic": "food"}`. Only the
+  food fact is exported, not "prefers short answers in the morning": never more than asked.
+- The file starts with a short preamble (an export the owner chose to share, its date, "use
+  as context") so any AI or person knows what it is. No ids, no pending or internal fields.
+- This is today's cross-platform path: a one-way snapshot any assistant can read.
+
 ## Closing shot (about 10 s)
 
 Switch the memory panel to **Markdown**: "This is the user's own file. Any assistant can read
@@ -137,5 +154,5 @@ it; none of them owns it."
 
 ## Timing budget
 
-About 2 min 50 s of conversation plus intro/outro. Keep it under 3 minutes: if it runs long,
-drop conversation 5 (decline) or shorten the closing shot.
+All eight are about 3 min 20 s of conversation, too long for one video: pick the ones that
+show the most. Suggested cut (about 2 min 30 s): 0, 2, 3, 6, 7.
