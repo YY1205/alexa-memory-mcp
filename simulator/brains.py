@@ -121,6 +121,7 @@ YES = {"yes", "yeah", "yep", "sure", "correct", "right", "please do", "do it", "
 NO = {"no", "nope", "no thanks", "don't", "do not", "never mind", "not really", "cancel"}
 OVERVIEW_ASK = re.compile(r"\b(what do you know about me|memory of me|remember anything about me|"
                           r"what have i told you|what do you remember)\b")
+EXPORT_ASK = re.compile(r"\b(export|share)\b")
 REVIEW_ASK = re.compile(r"\b(anything|something)\b.*\b(update|out of date|check|review)\b|\bout of date\b")
 _THIRD = {"am": "is", "have": "has", "do": "does", "go": "goes", "are": "is", "was": "was"}
 
@@ -196,6 +197,20 @@ def _category(fact: str) -> tuple[str, int | None]:
     if re.search(r"\b(job|work|lives?|name|birthday|allergic)\b", t):
         return "profile", None
     return "other", None
+
+
+def _export_args(u: str) -> dict:
+    """Share only what was asked for: categories and/or a topic."""
+    args: dict = {}
+    if re.search(r"\b(food|diet|eat|eating|vegetarian|meals?)\b", u):
+        args = {"categories": ["preference"], "topic": "food"}
+    elif re.search(r"\bpreferences?\b", u):
+        args = {"categories": ["preference"]}
+    elif re.search(r"\bplans?\b", u):
+        args = {"categories": ["active_context"]}
+    if "history" in u:
+        args["include_history"] = True
+    return args
 
 
 class ScriptedBrain:
@@ -303,6 +318,11 @@ class ScriptedBrain:
                     args["review_in_days"] = review
                 return ("tool", "propose_memory", args)
             return ("say", f"Thanks for the update. {last['confirmation_prompt']}")
+
+        if EXPORT_ASK.search(u):  # "Export my memory" / "Share my food preferences"
+            if n == 0:
+                return ("tool", "export_memory", _export_args(u))
+            return ("say", f"{last['spoken_summary']} It's in the memory panel, ready to download or copy.")
 
         if yes or no:
             return ("say", "Sorry, I'm not sure what you're answering. What would you like to do?")

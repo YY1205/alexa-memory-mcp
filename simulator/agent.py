@@ -23,7 +23,8 @@ _THINKING = re.compile(r"<thinking>.*?(</thinking>|$)", re.S | re.I)
 SYSTEM_TEMPLATE = """\
 You are Alexa+, a voice assistant, running in a simulator. Everything you write is
 spoken aloud by a speaker. Use the tools of connected services when a request needs
-them, and don't invent facts the tools did not return.
+them, and don't invent facts the tools did not return. This device has a screen: a memory
+export appears in its "Your memory file" panel, where the user can download or copy it.
 
 The memory server's own instructions. Follow them exactly:
 <server_instructions>

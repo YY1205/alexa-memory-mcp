@@ -156,6 +156,23 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
                              "backend": file_meta.get("backend"),
                              "web_view_link": link_url if str(link_url or "").startswith("https://") else None})
 
+    async def export(request: Request):
+        body = await request.json() if await request.body() else {}
+        categories = [str(c) for c in body.get("categories") or []] or None
+        try:
+            call = await link.export(categories, bool(body.get("include_history")),
+                                     str(body.get("topic") or "") or None)
+        except Exception as e:
+            err = _unwrap(e)
+            if isinstance(err, NotLinked):
+                return JSONResponse({"error": "Link your account to export your memory.", "linked": False},
+                                    status_code=401)
+            return JSONResponse({"error": f"Export failed: {type(err).__name__}"}, status_code=502)
+        result = call.result if isinstance(call.result, dict) else {}
+        if call.is_error:
+            return JSONResponse({"error": result.get("spoken_answer") or "Export failed."}, status_code=400)
+        return JSONResponse({**result, "mcp_latency_ms": call.mcp_latency_ms})
+
     def reset_allowed(request: Request) -> bool:
         if guard.gated:
             return True  # the passcode gate already checked this request
@@ -213,6 +230,7 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
         Route("/api/status", status),
         Route("/api/utterance", utterance, methods=["POST"]),
         Route("/api/memory", memory),
+        Route("/api/export", export, methods=["POST"]),
         Route("/api/reset", reset, methods=["POST"]),
         Mount("/static", StaticFiles(directory=STATIC), name="static"),
     ])

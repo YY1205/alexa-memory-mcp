@@ -189,6 +189,8 @@ def test_export_category_filter_topic_and_history(service):
 
 def test_export_is_stable_and_rejects_unknown_categories(service):
     assert service.export()["markdown"] == service.export()["markdown"]
+    all_ticked = service.export(["profile", "preference", "active_context", "project", "decision", "other"])
+    assert all_ticked["markdown"] == service.export()["markdown"]  # "Shared: everything"
     assert service.export(["preference", "profile"])["markdown"] == service.export(["preference", "profile"])["markdown"]
     with pytest.raises(MemoryError_):
         service.export(["passwords"])

@@ -208,6 +208,27 @@ def test_conversation_6_hand_edit_is_used(tmp_path):
             assert "Pepper" in client.get("/api/memory").json()["markdown"]
 
 
+def test_conversation_7_export_food_preferences_only(chat, sim):
+    out = chat("Share my food preferences.")
+    assert tools(out) == ["export_memory"]
+    assert out["trace"][0]["arguments"] == {"categories": ["preference"], "topic": "food"}
+    md = out["trace"][0]["result"]["markdown"]
+    assert "vegetarian" in md and "morning" not in md and "Maya" not in md  # nothing more than asked
+    assert out["reply_text"] == ("Your memory export is ready: 1 memory about food. "
+                                 "It's in the memory panel, ready to download or copy.")
+    assert "# Portable Memory export" not in out["reply_text"]  # never read the file aloud
+
+
+def test_export_button_api(sim):
+    r = sim.post("/api/export", json={"categories": ["profile", "decision"], "include_history": True})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["categories"] == ["profile", "decision"] and data["count"] == 4
+    assert "## About the owner" in data["markdown"] and "## Decisions" in data["markdown"]
+    assert "## Preferences" not in data["markdown"] and data["mcp_latency_ms"] < 500
+    assert sim.post("/api/export", json={"categories": ["nonsense"]}).status_code == 400
+
+
 def test_reset_needs_admin_token(sim):
     assert sim.post("/api/reset", json={}).status_code == 403
 

@@ -70,6 +70,7 @@
         <h2 id="mem-title">Your memory file</h2>
         <span id="mem-meta" class="muted small">memory://memories.md</span>
         <a id="drive-link" class="small" target="_blank" rel="noopener noreferrer" hidden>Open in Google Drive</a>
+        <button type="button" class="btn small-btn" id="export-btn" aria-expanded="false" aria-controls="export-box">Export</button>
         <div class="seg" role="tablist" aria-label="Memory view">
           <button type="button" class="seg-btn active" data-view="cards" role="tab" aria-selected="true">Rendered</button>
           <button type="button" class="seg-btn" data-view="raw" role="tab" aria-selected="false">Markdown</button>
@@ -81,6 +82,27 @@
         <span class="badge status-historical">historical (kept as history)</span>
         <span class="badge flash">just changed</span>
       </div>
+      <section id="export-box" class="export-box" hidden aria-label="Export memory">
+        <p class="small muted">A shareable Markdown snapshot for a friend or another AI assistant.
+          Only what you tick leaves this page, and only when you download or copy it.</p>
+        <fieldset class="export-cats">
+          <legend class="small">Include</legend>
+          <label><input type="checkbox" name="cat" value="profile" checked> About me</label>
+          <label><input type="checkbox" name="cat" value="preference" checked> Preferences</label>
+          <label><input type="checkbox" name="cat" value="active_context" checked> Plans</label>
+          <label><input type="checkbox" name="cat" value="project" checked> Projects</label>
+          <label><input type="checkbox" name="cat" value="decision" checked> Decisions</label>
+          <label><input type="checkbox" name="cat" value="other" checked> Other</label>
+          <label class="history"><input type="checkbox" id="export-history"> Include history</label>
+        </fieldset>
+        <div class="export-actions">
+          <button type="button" class="btn" id="export-preview-btn">Preview</button>
+          <button type="button" class="btn primary" id="export-download" disabled>Download .md</button>
+          <button type="button" class="btn" id="export-copy" disabled>Copy</button>
+          <span id="export-status" class="small muted" role="status"></span>
+        </div>
+        <pre id="export-preview" class="memory-raw export-preview" hidden></pre>
+      </section>
       <div id="memory" class="memory"></div>
       <pre id="memory-raw" class="memory-raw" hidden></pre>
     </section>

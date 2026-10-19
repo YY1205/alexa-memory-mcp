@@ -232,6 +232,14 @@ details.result pre {
   margin: 0; max-height: 66vh; overflow: auto; padding: 10px; background: var(--code-bg); border-radius: 8px;
   font: .78rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
 }
+.small-btn { font-size: .78rem; padding: 3px 10px; }
+.export-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.export-box p { margin: 0 0 8px; }
+.export-cats { border: 0; padding: 0; margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .85rem; }
+.export-cats legend { padding: 0; margin-bottom: 4px; color: var(--muted); }
+.export-cats .history { flex-basis: 100%; }
+.export-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.export-preview { margin-top: 10px; max-height: 40vh; }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .seg-btn { font: inherit; font-size: .78rem; padding: 3px 10px; border: 0; background: none; color: var(--muted); cursor: pointer; }
 .seg-btn.active { background: var(--accent); color: var(--accent-text); }

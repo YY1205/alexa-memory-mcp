@@ -155,7 +155,8 @@ class MemoryService:
         history = sorted((r for r in records if r.status == "historical"), key=lambda r: r.id) \
             if include_history else []
         exported_on = self._today().isoformat()
-        scope = ", ".join(EXPORT_HEADINGS[c] for c in wanted) if categories else "everything"
+        everything = set(wanted) == set(EXPORT_HEADINGS)
+        scope = "everything" if everything else ", ".join(EXPORT_HEADINGS[c] for c in wanted)
         if topic and topic.strip():
             scope += f" (topic: {topic.strip()})"
         lines = [
@@ -181,7 +182,7 @@ class MemoryService:
         markdown = "\n".join(lines) + "\n"
         what = f"{len(active)} {'memory' if len(active) == 1 else 'memories'}"
         about = f" about {topic.strip()}" if topic and topic.strip() else (
-            f" ({scope})" if categories else "")
+            "" if everything else f" ({scope})")
         return {
             "markdown": markdown,
             "count": len(active),

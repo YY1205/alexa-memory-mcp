@@ -10,6 +10,9 @@ const els = {
   trace: $("trace"), memory: $("memory"), memoryRaw: $("memory-raw"), memMeta: $("mem-meta"),
   brainChip: $("brain-chip"), serverChip: $("server-chip"), reset: $("reset-btn"), clock: $("clock"),
   linkChip: $("link-chip"), linkBtn: $("link-btn"), unlinkBtn: $("unlink-btn"), driveLink: $("drive-link"),
+  exportBtn: $("export-btn"), exportBox: $("export-box"), exportPreviewBtn: $("export-preview-btn"),
+  exportDownload: $("export-download"), exportCopy: $("export-copy"), exportStatus: $("export-status"),
+  exportPreview: $("export-preview"), exportHistory: $("export-history"),
 };
 
 let sessionId = newSessionId();
@@ -173,6 +176,8 @@ async function send(text) {
     }
     bubble(data.error ? "error" : "alexa", data.reply_text);
     renderTurn(text, data);
+    const exported = (data.trace || []).find((s) => s.tool === "export_memory" && s.result && s.result.markdown);
+    if (exported) showExport(exported.result, exported.arguments || {});  // voice export lands in the panel
     busy = false;
     if (!data.error) speak(data.reply_text);
     await loadMemory(true);
@@ -392,6 +397,82 @@ renderMute();
 setupRecognition();
 tickClock();
 setInterval(tickClock, 15000);
+// ---------------------------------------------------------------- export
+let exportMarkdown = "";
+
+function exportChoices() {
+  const cats = [...els.exportBox.querySelectorAll('input[name="cat"]:checked')].map((c) => c.value);
+  return { categories: cats, include_history: els.exportHistory.checked };
+}
+
+function showExport(result, args) {
+  els.exportBox.hidden = false;
+  els.exportBtn.setAttribute("aria-expanded", "true");
+  if (args && Array.isArray(args.categories) && args.categories.length) {
+    for (const c of els.exportBox.querySelectorAll('input[name="cat"]')) c.checked = args.categories.includes(c.value);
+  }
+  if (args && "include_history" in args) els.exportHistory.checked = !!args.include_history;
+  exportMarkdown = result.markdown;
+  els.exportPreview.textContent = exportMarkdown;
+  els.exportPreview.hidden = false;
+  els.exportDownload.disabled = els.exportCopy.disabled = false;
+  const topic = args && args.topic ? `, topic "${args.topic}"` : "";
+  els.exportStatus.textContent = `${result.count} ${result.count === 1 ? "memory" : "memories"}${topic}`;
+  els.exportBox.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+async function previewExport() {
+  const choice = exportChoices();
+  if (!choice.categories.length) { els.exportStatus.textContent = "Tick at least one category."; return; }
+  els.exportStatus.textContent = "Preparing…";
+  const { ok, data } = await api("/api/export", { method: "POST", body: JSON.stringify(choice) });
+  if (!ok) { els.exportStatus.textContent = data.error || "Export failed."; return; }
+  showExport(data, {});
+}
+
+function downloadExport() {
+  const blob = new Blob([exportMarkdown], { type: "text/markdown" });
+  const a = el("a", { href: URL.createObjectURL(blob),
+    download: `portable-memory-export-${new Date().toISOString().slice(0, 10)}.md` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function copyExport() {
+  const done = "Copied. Paste it into any AI assistant or message.";
+  try {
+    await navigator.clipboard.writeText(exportMarkdown);
+    els.exportStatus.textContent = done;
+    return;
+  } catch { /* clipboard API blocked (permissions policy, embedded view): try the classic way */ }
+  const area = el("textarea", { "aria-hidden": "true", style: "position:fixed;left:-9999px;top:0" });
+  area.value = exportMarkdown;
+  document.body.append(area);
+  area.select();
+  let copied = false;
+  try { copied = document.execCommand("copy"); } catch { copied = false; }
+  area.remove();
+  if (copied) { els.exportStatus.textContent = done; return; }
+  // last resort: select the preview so the user can press Cmd/Ctrl+C
+  const range = document.createRange();
+  range.selectNodeContents(els.exportPreview);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  els.exportStatus.textContent = "Copy is blocked here: the text is selected, press Cmd+C (or use Download).";
+}
+
+els.exportBtn.addEventListener("click", () => {
+  const open = els.exportBox.hidden;
+  els.exportBox.hidden = !open;
+  els.exportBtn.setAttribute("aria-expanded", String(open));
+});
+els.exportPreviewBtn.addEventListener("click", previewExport);
+els.exportDownload.addEventListener("click", downloadExport);
+els.exportCopy.addEventListener("click", copyExport);
+// changing the choice invalidates the preview
+els.exportBox.addEventListener("change", () => { els.exportDownload.disabled = els.exportCopy.disabled = true; });
+
 async function unlinkAccount() {
   const token = store("session", "sim-admin-token");
   const res = await api("/api/unlink", { method: "POST", headers: token ? { "X-Admin-Token": token } : {} });

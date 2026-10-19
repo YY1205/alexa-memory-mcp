@@ -91,6 +91,17 @@ class McpLink:
         is_error = bool(result.is_error) or (isinstance(parsed, dict) and "error" in parsed)
         return ToolCall(parsed, is_error, round(latency, 1))
 
+    async def export(self, categories: list[str] | None, include_history: bool,
+                     topic: str | None = None) -> ToolCall:
+        """export_memory over MCP (the panel's Export button)."""
+        args = {"include_history": include_history}
+        if categories:
+            args["categories"] = categories
+        if topic:
+            args["topic"] = topic
+        async with self.connect() as client:
+            return await self.call_tool(client, "export_memory", args)
+
     async def read_memory(self) -> tuple[str, float, dict]:
         """The memory file over MCP, its read latency, and its metadata from
         resources/list (backend, and webViewLink when it lives in Google Drive)."""
