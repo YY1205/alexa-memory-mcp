@@ -45,11 +45,13 @@ Contact: {{CONTACT}}
   replies.
 - **Google Drive.** Your file lives in Google's storage under your Google account and
   Google's policies. Drive keeps its own version history of the file.
-
 - **Exports.** When you ask for an export ("share my food preferences" or the Export button),
-  the server builds a Markdown file with only what you chose. It leaves the server only when
-  you download or copy it, and you decide who receives it. Once shared, the copy is outside
-  this service's control; the file says it may be out of date after its export date.
+  the server builds a Markdown file with only what you chose and returns it to the app that
+  asked: the simulator shows it on screen, and for a voice request it is also part of the
+  tool result the assistant's AI model sees (Amazon Bedrock in the simulator, Amazon on
+  Alexa+), like any other memory result. Beyond that, it goes elsewhere only when you
+  download or copy it, and you decide who receives it. Once shared, that copy is outside this
+  service's control; the file says it may be out of date after its export date.
 
 Nothing is sold, shared for advertising, or used to train models by this project. There
 are no analytics or tracking cookies.
