@@ -144,7 +144,8 @@ class MemoryService:
         no pending records, no internal fields. `categories` and `topic` (keywords
         matched against facts and tags) narrow what is shared.
         """
-        wanted = [c for c in (categories or EXPORT_HEADINGS) if c in EXPORT_HEADINGS]
+        requested = set(categories or EXPORT_HEADINGS)
+        wanted = [c for c in EXPORT_HEADINGS if c in requested]  # canonical order: stable output
         if categories and not wanted:
             raise MemoryError_(f"I don't know those categories. Use: {', '.join(EXPORT_HEADINGS)}.")
         records = [r for r in self.store.load() if r.category in wanted]
