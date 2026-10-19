@@ -16,6 +16,8 @@ from .skills import READ_REFERENCE_TOOL, Skill, load_skills, reference_tool_spec
 log = logging.getLogger(__name__)
 # Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it.
 _THINKING = re.compile(r"<thinking>.*?(</thinking>|$)", re.S | re.I)
+# ...and sometimes wraps the spoken part in <speech> tags: keep the words, drop the tags.
+_SPEECH_TAGS = re.compile(r"</?speech>", re.I)
 
 # Only the persona lives here. How to use the memory server comes from its own
 # `instructions` (the minimal contract) and from the Agent Skill (skills/), loaded
@@ -44,7 +46,7 @@ class Session:
 def spoken_text(message: dict) -> str:
     """The part of a model message that is meant to be said aloud."""
     text = " ".join(b["text"] for b in message["content"] if "text" in b)
-    return re.sub(r"\s+", " ", _THINKING.sub("", text)).strip()
+    return re.sub(r"\s+", " ", _SPEECH_TAGS.sub("", _THINKING.sub("", text))).strip()
 
 
 def _unwrap(exc: BaseException) -> BaseException:
@@ -157,7 +159,8 @@ class Agent:
                             continue
                         call = await self.link.call_tool(client, use["name"], use.get("input") or {})
                         trace.append({"tool": use["name"], "kind": "mcp", "arguments": use.get("input") or {},
-                                      "result": call.result, "mcp_latency_ms": call.mcp_latency_ms})
+                                      "result": call.result, "mcp_latency_ms": call.mcp_latency_ms,
+                                      **({"file": call.file} if call.file else {})})  # file: screen only
                         content = [{"json": call.result}] if isinstance(call.result, dict) \
                             else [{"text": str(call.result)}]
                         results.append({"toolResult": {"toolUseId": use["toolUseId"], "content": content,

@@ -184,12 +184,15 @@ class MemoryService:
         about = f" about {topic.strip()}" if topic and topic.strip() else (
             "" if everything else f" ({scope})")
         return {
+            # First, so any model sees it before the file: the file is for the screen or a
+            # download, not for reading aloud (models tended to read facts from it).
+            "speak": "Say spoken_summary only; don't read, list or summarize the exported facts.",
+            "spoken_summary": f"Your memory export is ready: {what}{about}.",
             "markdown": markdown,
             "count": len(active),
             "history_count": len(history),
             "categories": wanted,
             "exported_on": exported_on,
-            "spoken_summary": f"Your memory export is ready: {what}{about}.",
         }
 
     # ---------- write (two-step) ----------

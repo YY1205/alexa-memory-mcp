@@ -369,6 +369,18 @@ def test_write_only_token_cannot_read(client):
     assert "vegetarian" not in r.text  # the export resource needs memory.read too
 
 
+def test_export_file_travels_in_meta_not_in_model_content(client):
+    ep, verifier, params = start_link(client, scopes=["memory.read"])
+    tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
+    r = call_tool(client, tokens.access_token, "export_memory", {"categories": ["preference"], "topic": "food"})
+    result = r.json()["result"]
+    content = result["content"][0]["text"]
+    assert "vegetarian" not in content and '"count": 1' in content and "spoken_summary" in content
+    export = result["_meta"]["portable_memory/export"]
+    assert export["mimeType"] == "text/markdown" and "vegetarian" in export["markdown"]
+    assert export["filename"].startswith("portable-memory-export-")
+
+
 def test_export_resource_serves_the_full_export(client):
     ep, verifier, params = start_link(client, scopes=["memory.read"])
     tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)

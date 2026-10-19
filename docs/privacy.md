@@ -47,10 +47,11 @@ Contact: {{CONTACT}}
   Google's policies. Drive keeps its own version history of the file.
 - **Exports.** When you ask for an export ("share my food preferences" or the Export button),
   the server builds a Markdown file with only what you chose and returns it to the app that
-  asked: the simulator shows it on screen, and for a voice request it is also part of the
-  tool result the assistant's AI model sees (Amazon Bedrock in the simulator, Amazon on
-  Alexa+), like any other memory result. Beyond that, it goes elsewhere only when you
-  download or copy it, and you decide who receives it. Once shared, that copy is outside this
+  asked, for display: the file travels in the result's metadata, and the assistant's AI
+  model is given only a summary (how many memories, which categories). The simulator shows
+  the file on your screen and never passes it to its model (Amazon Bedrock). How another MCP
+  client, such as Alexa+, handles that metadata is up to that client. Beyond that, the file
+  goes elsewhere only when you download or copy it, and you decide who receives it. Once shared, that copy is outside this
   service's control; the file says it may be out of date after its export date.
 
 Nothing is sold, shared for advertising, or used to train models by this project. There

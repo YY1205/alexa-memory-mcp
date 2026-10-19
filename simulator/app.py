@@ -171,7 +171,7 @@ def build_app(mcp_url: str | None = None, brain: Brain | None = None, admin_toke
         result = call.result if isinstance(call.result, dict) else {}
         if call.is_error:
             return JSONResponse({"error": result.get("spoken_answer") or "Export failed."}, status_code=400)
-        return JSONResponse({**result, "mcp_latency_ms": call.mcp_latency_ms})
+        return JSONResponse({**result, "markdown": call.file or "", "mcp_latency_ms": call.mcp_latency_ms})
 
     def reset_allowed(request: Request) -> bool:
         if guard.gated:

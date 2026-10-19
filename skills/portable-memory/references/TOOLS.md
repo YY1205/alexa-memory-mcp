@@ -33,10 +33,12 @@ A shareable Markdown snapshot (read-only). `categories` is a list from `profile`
 keywords matched against facts and tags (e.g. `"food"`); `include_history` adds a
 "Previously true" section.
 
-Returns `markdown` (a preamble saying it's an owner-approved export with its date, then the
-active memories as "The owner ..." sentences under category headings with their
-last-confirmed date; no ids, no pending records), `count`, `history_count`, `categories`,
-`exported_on`, and `spoken_summary` ("Your memory export is ready: 1 memory about food.").
+You get a summary: `spoken_summary` ("Your memory export is ready: 1 memory about food."),
+`count`, `history_count`, `categories`, `exported_on`. The file itself is **not** given to
+you: it travels in the result's `_meta` (`portable_memory/export`: `markdown`, `mimeType`,
+`filename`) for the client to show or download. It has a preamble saying it's an
+owner-approved export with its date, then the active memories as "The owner ..." sentences
+under category headings with their last-confirmed date; no ids, no pending records.
 Unknown categories return an `error`. The latest full export is also the resource
 `memory://export.md`.
 

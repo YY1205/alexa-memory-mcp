@@ -182,6 +182,7 @@ def test_export_category_filter_topic_and_history(service):
     food = service.export(["preference"], topic="food")
     assert food["count"] == 1 and "vegetarian" in food["markdown"] and "morning" not in food["markdown"]
     assert food["spoken_summary"] == "Your memory export is ready: 1 memory about food."
+    assert list(food)[:2] == ["speak", "spoken_summary"]  # the speaking rule comes before the file
     hist = service.export(["profile"], include_history=True)
     assert "## Previously true" in hist["markdown"] and "Biscuit" in hist["markdown"].split("Previously true")[1]
     assert hist["history_count"] == 1

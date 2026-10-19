@@ -88,8 +88,9 @@ into another AI assistant.
 - If it's unclear what to include (e.g. "share some of my memory with my doctor"), ask which
   topics or categories first; don't guess broad.
 - `include_history: true` only when the user asks for past or changed facts.
-- Say the result's `spoken_summary` (and where the file is, if your device shows it). Never
-  read the exported file aloud.
+- Say the result's `spoken_summary` (and where the file is, if your device shows it), and
+  nothing from the file: don't read, list or summarize the exported facts aloud. The user
+  is sharing them with someone else, not asking to hear them.
 
 ## More detail
 

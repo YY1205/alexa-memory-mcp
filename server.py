@@ -6,12 +6,14 @@ Configuration: see .env.example
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import date
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
+from mcp.types import CallToolResult, TextContent
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -53,8 +55,8 @@ Voice rules:
   "Do you have any memory of me?"), call memory_overview. Never tell the user you have
   no memory of them unless memory_overview (or recall's total_active) says 0.
 - To share memory with someone else or another assistant, call export_memory with only
-  what the user asked for (categories and/or topic). Say its spoken_summary; never read
-  the exported file aloud.
+  what the user asked for (categories and/or topic). Say its spoken_summary. The file goes
+  to the user's screen (in the result's _meta), not to you.
 - Memories are written about "the user" in the third person; speak to the user in
   the second person. Keep spoken answers short. Do not read ids aloud.
 """
@@ -121,14 +123,24 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
 
     @mcp.tool()
     def export_memory(categories: list[str] | None = None, include_history: bool = False,
-                      topic: str | None = None) -> dict:
+                      topic: str | None = None) -> CallToolResult:
         """Make a shareable Markdown snapshot of the user's memory that they can download
         or paste into another AI assistant or send to a friend. Read-only. Share only what
         the user asked for: categories (profile, preference, active_context, project,
         decision, other; default all) and/or topic (keywords, e.g. "food"). Active
-        memories only; include_history adds a "Previously true" section. Returns
-        markdown and spoken_summary: say the summary, never read the file aloud."""
-        return safe(READ, service.export, categories, include_history, topic)
+        memories only; include_history adds a "Previously true" section. You get a summary
+        (say spoken_summary); the file itself goes to the user's screen, not to you."""
+        result = safe(READ, service.export, categories, include_history, topic)
+        if "error" in result:
+            return CallToolResult(content=[TextContent(type="text", text=json.dumps(result))], is_error=False)
+        markdown = result.pop("markdown")
+        result["file"] = "Delivered to the user's screen for download or copy; not shown to you."
+        # The file travels in _meta for the client (screen, download); the model only gets
+        # the summary, so it can't read the shared facts aloud or pass them on.
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps(result, indent=2))],
+            meta={"portable_memory/export": {"markdown": markdown, "mimeType": "text/markdown",
+                                             "filename": f"portable-memory-export-{result['exported_on']}.md"}})
 
     @mcp.tool()
     def propose_memory(fact: str, category: str = "other", review_in_days: int | None = None) -> dict:

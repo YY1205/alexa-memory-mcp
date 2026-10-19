@@ -8,7 +8,10 @@ Manual (costs money, needs AWS). Start a memory server with DEMO_ADMIN=1 first, 
 
 Each conversation starts from freshly reset demo data. Pass/fail is judged from the
 memory file (read over MCP) and the replies, not from exact wording:
-  0, 7-9       "What do you know about me?" and other phrasings: the reply doesn't deny
+  7 export      export_memory called; the file has the food fact and nothing else (no
+                "morning" preference, no ids); the reply doesn't read the file; a different
+                model (Nova Lite) given only the file says salmon is a bad idea
+  0, 10-12     "What do you know about me?" and other phrasings: the reply doesn't deny
                 having memory and mentions real content; nothing written
   1 recall      reply has the birthday; nothing written
   2 save        dentist fact active and user-confirmed; nothing pending
@@ -24,6 +27,7 @@ Get TOKEN with scripts/oauth_token.py (real OAuth flow).
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import statistics
 import sys
@@ -47,12 +51,16 @@ CONVERSATIONS = {
     4: ["Is there anything I should update?", "I got the job, I start in November.", "Yes."],
     5: ["Remember that I hate jazz.", "No."],
     6: ["When does my dog need his heartworm pill?"],  # after a hand edit: Biscuit -> Pepper
+    7: ["Share my food preferences."],  # export; then another assistant reads the file
     # other phrasings of conversation 0 (the "do you have any memory of me?" bug)
-    7: ["Do you have any memory of me?"],
-    8: ["Do you remember anything about me?"],
-    9: ["What have I told you?"],
+    10: ["Do you have any memory of me?"],
+    11: ["Do you remember anything about me?"],
+    12: ["What have I told you?"],
 }
-OVERVIEW_QUESTIONS = {0, 7, 8, 9}
+OVERVIEW_QUESTIONS = {0, 10, 11, 12}
+OTHER_ASSISTANT = "us.amazon.nova-lite-v1:0"  # "a different AI assistant" for conversation 7
+SALMON_QUESTION = ("I'm cooking dinner for this person tonight. Is grilled salmon a good idea? "
+                   "Answer in one or two sentences.")
 DENIALS = ("don't have any", "do not have any", "no memor", "don't know anything", "nothing about you",
            "haven't told me", "don't have anything", "no information")
 KNOWN = ("10", "ten", "sister", "maya", "portland", "sam", "vegetarian", "spanish", "biscuit", "kitchen",
@@ -69,10 +77,22 @@ def _describe(step: dict) -> str:
         extra = f"({step['arguments'].get('query', '')!r} -> found={r.get('found')} total={r.get('total_active')})"
     elif step["tool"] == "memory_overview":
         extra = f"(total={r.get('total_active')})"
+    elif step["tool"] == "export_memory":
+        extra = f"({json.dumps(step['arguments'])} -> count={r.get('count')})"
     return step["tool"] + extra
 
 
-def judge(n: int, replies: list[str], records: dict) -> list[str]:
+def other_assistant_answer(markdown: str) -> str:
+    """Paste the export into a different model with no tools and no system prompt."""
+    import boto3
+
+    client = boto3.client("bedrock-runtime", region_name=os.getenv("AWS_REGION", "us-east-1"))
+    resp = client.converse(modelId=OTHER_ASSISTANT, messages=[{"role": "user", "content": [
+        {"text": f"{markdown}\n\n{SALMON_QUESTION}"}]}], inferenceConfig={"maxTokens": 200})
+    return "".join(b.get("text", "") for b in resp["output"]["message"]["content"])
+
+
+def judge(n: int, replies: list[str], records: dict, calls: list[dict] = ()) -> list[str]:
     """Return the problems found (empty list = pass)."""
     problems = []
     pending = [r.id for r in records.values() if r.status == "pending"]
@@ -90,6 +110,28 @@ def judge(n: int, replies: list[str], records: dict) -> list[str]:
             problems.append("said there is no memory")
         if not any(k in reply for k in KNOWN):
             problems.append("mentioned nothing that is remembered")
+        if new or any(r.status != "active" for r in records.values()):
+            problems.append("memory changed")
+    elif n == 7:
+        exports = [c for c in calls if c.get("tool") == "export_memory" and c.get("file")]
+        if not exports:
+            problems.append("export_memory not called")
+        else:
+            md = exports[-1].get("file") or ""  # from _meta: what the user would share
+            if "vegetarian" in json.dumps(exports[-1]["result"]):
+                problems.append("the model was given the exported facts")
+            if "vegetarian" not in md:
+                problems.append("export misses the food preference")
+            leaked = [w for w in ("morning", "Maya", "Portland", "marathon", "MEM-") if w in md]
+            if leaked:
+                problems.append(f"exported more than asked ({', '.join(leaked)})")
+            if any("Portable Memory export" in r or "last confirmed" in r for r in replies):
+                problems.append("read the file aloud")
+            answer = other_assistant_answer(md)
+            exports[-1]["other_assistant"] = answer
+            a = answer.lower()
+            if not ("vegetarian" in a or "fish" in a) or not any(w in a for w in ("not", "no ", "avoid", "isn't")):
+                problems.append("other assistant could not use the export")
         if new or any(r.status != "active" for r in records.values()):
             problems.append("memory changed")
     elif n == 1:
@@ -146,11 +188,12 @@ async def evaluate(url: str, token: str | None, models: list[str], repeats: int,
                 await link.reset_demo()
                 if n == 6:
                     await hand_edit(memory_file, wait)
-                replies, errors = [], []
+                replies, errors, mcp_calls = [], [], []
                 lines.append(f"--- run {rep}, conversation {n}")
                 for text in turns:
                     out = await agent.handle(f"eval-{model}-{rep}-{n}", text)
                     replies.append(out["reply_text"])
+                    mcp_calls += [s for s in out["trace"] if s.get("kind") == "mcp"]
                     if out.get("error"):
                         errors.append(out["error"])
                     else:
@@ -161,7 +204,11 @@ async def evaluate(url: str, token: str | None, models: list[str], repeats: int,
                     lines.append(f"     tools: {calls} | model {out['model_latency_ms']:.0f} ms")
                 markdown, _, _ = await link.read_memory()
                 records = {r.id: r for r in from_markdown(markdown)}
-                problems = judge(n, replies, records) + [f"{e} error" for e in errors]
+                problems = judge(n, replies, records, mcp_calls) + [f"{e} error" for e in errors]
+                for c in mcp_calls:
+                    if c.get("other_assistant"):
+                        lines.append(f"  OTHER ASSISTANT ({OTHER_ASSISTANT}, given only the export): "
+                                     f"{c['other_assistant'].strip()}")
                 passes[n] += not problems
                 lines.append("  RESULT: " + ("PASS" if not problems else "FAIL - " + "; ".join(problems)))
         total = sum(passes.values())

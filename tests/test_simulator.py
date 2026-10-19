@@ -212,7 +212,8 @@ def test_conversation_7_export_food_preferences_only(chat, sim):
     out = chat("Share my food preferences.")
     assert tools(out) == ["export_memory"]
     assert out["trace"][0]["arguments"] == {"categories": ["preference"], "topic": "food"}
-    md = out["trace"][0]["result"]["markdown"]
+    md = out["trace"][0]["file"]  # the file reaches the screen via _meta...
+    assert "vegetarian" not in str(out["trace"][0]["result"])  # ...while the model only gets the summary
     assert "vegetarian" in md and "morning" not in md and "Maya" not in md  # nothing more than asked
     assert out["reply_text"] == ("Your memory export is ready: 1 memory about food. "
                                  "It's in the memory panel, ready to download or copy.")
@@ -369,6 +370,8 @@ def test_model_reasoning_is_never_spoken():
         {"text": "<thinking> I will ask the user if it is still true. </thinking> Is that still true?"}]}
     assert spoken_text(msg) == "Is that still true?"
     assert spoken_text({"role": "assistant", "content": [{"text": "<thinking>cut off"}]}) == ""
+    wrapped = {"role": "assistant", "content": [{"text": "<speech> Is that still true? </speech>"}]}
+    assert spoken_text(wrapped) == "Is that still true?"
 
 
 # ---------- MCP tool schema -> Bedrock toolSpec ----------

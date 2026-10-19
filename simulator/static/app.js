@@ -176,8 +176,8 @@ async function send(text) {
     }
     bubble(data.error ? "error" : "alexa", data.reply_text);
     renderTurn(text, data);
-    const exported = (data.trace || []).find((s) => s.tool === "export_memory" && s.result && s.result.markdown);
-    if (exported) showExport(exported.result, exported.arguments || {});  // voice export lands in the panel
+    const exported = (data.trace || []).find((s) => s.tool === "export_memory" && s.file);
+    if (exported) showExport({ ...exported.result, markdown: exported.file }, exported.arguments || {});  // voice export lands in the panel
     busy = false;
     if (!data.error) speak(data.reply_text);
     await loadMemory(true);

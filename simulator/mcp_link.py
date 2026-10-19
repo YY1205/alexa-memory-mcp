@@ -32,9 +32,10 @@ class ServerProfile:
 
 @dataclass
 class ToolCall:
-    result: Any            # parsed JSON result (dict) or plain text
+    result: Any            # parsed JSON result (dict) or plain text: what the model sees
     is_error: bool
     mcp_latency_ms: float
+    file: str | None = None  # an export's Markdown from _meta: for the screen, never the model
 
 
 class NotLinked(Exception):
@@ -89,7 +90,8 @@ class McpLink:
         if parsed == "" and result.structured_content is not None:
             parsed = result.structured_content
         is_error = bool(result.is_error) or (isinstance(parsed, dict) and "error" in parsed)
-        return ToolCall(parsed, is_error, round(latency, 1))
+        export = (result.meta or {}).get("portable_memory/export") or {}
+        return ToolCall(parsed, is_error, round(latency, 1), export.get("markdown"))
 
     async def export(self, categories: list[str] | None, include_history: bool,
                      topic: str | None = None) -> ToolCall:
