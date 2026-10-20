@@ -27,18 +27,20 @@ Use desktop Chrome for voice. Typing works in any browser.
    to the simulator with "Account linked".
 3. Click **Reset demo** to start from Sam's fresh memory file.
 
-## 2. Talk to it (about 3 minutes)
+## 2. Talk to it (about 4 minutes)
 
 Click the blue microphone and speak, or type and press Enter. Say each line, wait for the
 answer, then say the next.
 
 | # | You say | What should happen |
 |---|---|---|
+| 0 | What do you know about me? | "I remember 10 things about you, including ..." One `memory_overview` call (counts per category, newest memories, what needs review). |
 | 1 | When is my sister's birthday? | "Your sister Maya's birthday is on November 2." One `recall` call. |
 | 2 | Remember that my dentist appointment is Friday at 3. -> Yes. | It reads the fact back first. A **pending** record (dashed, amber) appears in the memory file; after "Yes." it turns **active**. Nothing is saved silently. |
 | 3 | The kitchen contractor now starts on the 27th. -> Yes. | It notices this updates the kitchen note and asks **once**. One "Yes." saves the new fact; the old one stays as **historical** (struck through, "replaced by ..."). |
 | 4 | Is there anything I should update? -> I got the job, I start in November. -> Yes. | It finds the overdue job-interview note, retires it, and offers to save the news. |
 | 5 | Remember that I hate jazz. -> No. | Nothing is saved; the pending record disappears. |
+| 7 | Share my food preferences. | An export of **only** the food fact opens in the memory panel (Copy / Download .md). Alexa just says it's ready; the model never even receives the file. |
 
 Wording of Alexa's replies varies (it's a real model); the memory-file changes are the
 thing to check.
@@ -52,6 +54,11 @@ thing to check.
 * **Your memory file**: the real `memories.md`, read through the MCP resource after every
   turn. Changed records flash; pending and historical records look different from active
   ones. **Markdown** shows the raw file: this is the file the user owns.
+* **Export** (button in the memory panel): pick categories (all ticked by default) and
+  whether to include history, **Preview**, then **Copy** or **Download .md**. Paste the file
+  into any other AI assistant and ask it something about Sam: e.g. after exporting food
+  preferences, "I'm cooking dinner for this person. Is grilled salmon a good idea?"
+  This one-way snapshot is how the memory travels to other assistants today.
 * **Privacy**: the memory server's `/privacy` explains what goes where.
 
 ## 4. Optional: check the MCP server directly

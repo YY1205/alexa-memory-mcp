@@ -23,14 +23,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from auth import client as oc  # noqa: E402
-from eval_bedrock import CONVERSATIONS, judge  # noqa: E402
+from eval_bedrock import CONVERSATIONS, OTHER_ASSISTANT, judge  # noqa: E402
 from memory.schema import from_markdown  # noqa: E402
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("sim_url")
-    ap.add_argument("--conversations", default="1,2,3,4,5")
+    ap.add_argument("--conversations", default="0,1,2,3,4,5,7")
     ap.add_argument("--pace", type=float, default=7.0, help="seconds between utterances (rate limit)")
     ap.add_argument("--out", default="proof/public-conversations.txt")
     args = ap.parse_args()
@@ -52,7 +52,7 @@ def main() -> int:
             session = f"public-eval-{n}-{int(time.time())}"
             assert browser.post(f"{sim}/api/reset", json={"session_id": session}).status_code == 200
             lines.append(f"--- conversation {n}")
-            replies, errors, mcp_ms = [], [], []
+            replies, errors, mcp_ms, mcp_steps = [], [], [], []
             for text in CONVERSATIONS[n]:
                 time.sleep(args.pace)
                 r = browser.post(f"{sim}/api/utterance", json={"session_id": session, "text": text})
@@ -65,6 +65,7 @@ def main() -> int:
                 if out.get("error"):
                     errors.append(out["error"])
                 steps = [s for s in out["trace"] if s.get("kind") == "mcp"]
+                mcp_steps += steps
                 mcp_ms += [s["mcp_latency_ms"] for s in steps]
                 lines.append(f"  YOU: {text}\n  ALEXA: {out['reply_text']}")
                 lines.append(f"     tools: {', '.join(s['tool'] for s in steps) or '-'} | MCP "
@@ -72,7 +73,11 @@ def main() -> int:
                              f"{out['model_latency_ms']:.0f} ms")
             memory = browser.get(f"{sim}/api/memory").json()
             records = {r.id: r for r in from_markdown(memory["markdown"])}
-            problems = judge(n, replies, records) + [f"{e} error" for e in errors]
+            problems = judge(n, replies, records, mcp_steps) + [f"{e} error" for e in errors]
+            for step in mcp_steps:
+                if step.get("other_assistant"):
+                    lines.append(f"  OTHER ASSISTANT ({OTHER_ASSISTANT}, given only the export): "
+                                 f"{step['other_assistant'].strip()}")
             results[n] = not problems
             lines.append("  RESULT: " + ("PASS" if not problems else "FAIL - " + "; ".join(problems)))
         browser.post(f"{sim}/api/reset", json={})  # leave Sam's fresh memory for the judges
