@@ -48,3 +48,26 @@ fix. The inline policies written in 5.4 were checked and are correct.
 | Conversations 1-5 through the public simulator, Nova Pro | 5/5 PASS; MCP 6-15 ms per call inside AWS; model 1.1-2.0 s per turn | proof/public-conversations.txt |
 
 The public simulator was left linked and reset to Sam's seed for the judges.
+
+## Redeploy (Oct 19-20): current main `668b347` (memory_overview + export)
+
+| Step | Resource | Name / value | Notes |
+|---|---|---|---|
+| R.0 | (read-only) | identity `user/yue-admin` (IAM user, not root) | |
+| R.1 | ECR image | `alexa-memory-mcp:668b347` (arm64, built with Colima) | `docker logout` right after the push |
+| R.2 | update | `pm-server`, `pm-sim`: image only | roles, env (13 / 11 vars), secrets (2 / 3), sizing, subnets unchanged; no new AWS resources |
+| R.3 | (read-only) | rollout | both deployments COMPLETED; running tasks verified on `668b347` directly (DescribeTaskDefinition is not allowed on Express-managed task definitions) |
+
+### Verification (after the redeploy)
+
+| Check | Result | Proof |
+|---|---|---|
+| 401 without token, no `WWW-Authenticate`; both metadata docs; /privacy, /terms, /addon-assets; TLS; simulator health, passcode gate, API behind the gate | 11/11 PASS | |
+| MCP Inspector tools/list with an OAuth token | PASS (8 tools, incl. `memory_overview`, `export_memory`) | proof/inspector-tools-list-public.txt |
+| Conversations 0-5 and 7 through the public simulator, Nova Pro (6 skipped: needs a hand edit of the file) | 6/7 PASS; #4 FAIL once (the model answered the review itself, then claimed a save after a `confirm_memory` error); #4 re-run twice: 2/2 PASS. MCP 4-49 ms per call | proof/public-conversations.txt |
+
+Known issue, not fixed in this deployment: Nova Pro sometimes calls `resolve_review` without
+waiting for the user's answer in conversation 4.
+
+The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
+(10 active records) for the judges.

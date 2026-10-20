@@ -103,10 +103,12 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 
 - **`v1.0-alexa-demo`** (annotated tag on `05885b9`) is the known-good fallback for the
   submission: if later work breaks anything, submit / redeploy from this tag.
-- **Deployed right now** (public demo, ECS Express Mode): image `alexa-memory-mcp:e32e445` on
-  both pm-server and pm-sim. That image is *older* than the tag: it does not have the
-  memory_overview fix. Redeploying the tag means building it as a new image (tag it with
-  the commit id), pushing to ECR, then `update-express-gateway-service` on both services.
+- **`v1.1-submission`** (annotated tag on `668b347`): the commit deployed for judging
+  (memory_overview + export).
+- **Deployed right now** (public demo, ECS Express Mode): image `alexa-memory-mcp:668b347` on
+  both pm-server and pm-sim (redeployed Oct 19-20, docs/DEPLOY-LOG.md). Redeploying means
+  building the commit as a new image (tag it with the commit id), pushing to ECR, then
+  `update-express-gateway-service` on both services.
 - Cross-platform / multi-client work is cancelled; the cross-platform path is the memory
   export (one-way snapshot).
 

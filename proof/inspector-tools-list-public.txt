@@ -1,4 +1,4 @@
-# 2026-10-18T21:08:11Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, OAuth 2.1)
+# 2026-10-20T06:34:29Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:668b347, OAuth 2.1)
 # token: OAuth access token from scripts/oauth_token.py (auth code + PKCE S256 + resource), redacted below
 
 $ curl -i -X POST <server>/mcp   # no token
@@ -12,7 +12,7 @@ $ npx @modelcontextprotocol/inspector --cli <server>/mcp --method tools/list --h
   "tools": [
     {
       "name": "recall",
-      "description": "Look up what the user has asked you to remember. Use whenever the user asks\nabout themselves, their plans, preferences or past decisions (\"what did I say\nabout...\", \"when is my...\"). Returns current memories only; phrase the spoken\nanswer from them. category is optional: profile, preference, active_context,\nproject, decision, other.",
+      "description": "Look up what the user has asked you to remember. Use whenever the user asks\nabout themselves, their plans, preferences or past decisions (\"what did I say\nabout...\", \"when is my...\"). Search words matter: pass the topic (\"sister\nbirthday\"). Returns current memories only; phrase the spoken answer from them.\ntotal_active is the number of memories overall: if nothing matched but\ntotal_active > 0, the memory is not empty (use memory_overview for general\nquestions). category is optional: profile, preference, active_context,\nproject, decision, other.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -37,6 +37,57 @@ $ npx @modelcontextprotocol/inspector --cli <server>/mcp --method tools/list --h
           "query"
         ],
         "title": "recallArguments"
+      }
+    },
+    {
+      "name": "memory_overview",
+      "description": "What you remember about the user in general: how many memories, how many per\ncategory, the most recently updated ones, and how many are due for review. Use\nfor questions like \"What do you know about me?\", \"Do you have any memory of me?\",\n\"What have I told you?\". spoken_summary is a ready-to-say sentence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "title": "memory_overviewArguments"
+      }
+    },
+    {
+      "name": "export_memory",
+      "description": "Make a shareable Markdown snapshot of the user's memory that they can download\nor paste into another AI assistant or send to a friend. Read-only. Share only what\nthe user asked for: categories (profile, preference, active_context, project,\ndecision, other; default all) and/or topic (keywords, e.g. \"food\"). Active\nmemories only; include_history adds a \"Previously true\" section. You get a summary\n(say spoken_summary); the file itself goes to the user's screen, not to you.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Categories"
+          },
+          "include_history": {
+            "default": false,
+            "title": "Include History",
+            "type": "boolean"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Topic"
+          }
+        },
+        "title": "export_memoryArguments"
       }
     },
     {
