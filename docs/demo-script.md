@@ -1,4 +1,4 @@
-# Demo script: Simulated Alexa+ with Portable Memory
+# Demo script: Simulated Alexa+ with Memory Steward
 
 The golden conversations for the demo video (< 3 minutes). All data is the fictional
 persona "Sam" from `demo_data/seed.py`. Its dates are relative to the day it runs (Reset demo
@@ -93,7 +93,8 @@ through the MCP resource after every turn).
 | Alexa | Got it, I'll remember that. |
 
 - Turn 1: `list_due_reviews` returns exactly one memory, MEM-0007 (its review date was 3 days
-  ago; every other review date is in the future).
+  ago; every other review date is in the future). Nothing else: the turn ends with the
+  question, and no write happens until the user answers.
 - Turn 2: `resolve_review {"memory_id": "MEM-0007", "still_true": false}` → MEM-0007 turns
   historical; `propose_memory` stages the new fact (pending).
 - Turn 3: `confirm_memory` → the new fact is active.

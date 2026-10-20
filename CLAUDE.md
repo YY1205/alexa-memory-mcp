@@ -2,7 +2,8 @@
 
 ## Project
 
-`alexa-memory-mcp` ("Portable Memory for Alexa+") is a self-hosted MCP server that gives
+`alexa-memory-mcp` ("Memory Steward for Alexa+", tagline "It manages your memory. You own
+it."; renamed from "Portable Memory" on Oct 20, repo and Python module names unchanged) is a self-hosted MCP server that gives
 Alexa+ a long-term memory the user owns. The memory is a plain Markdown file (local disk
 or Google Drive) that the user can read and edit by hand; assistants are clients of that
 file, not its owner. Because voice is error-prone, writes are never silent:
@@ -49,7 +50,7 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
   you change a golden line, change all three together.
 - No logos or trademarks on the page; call it "Simulated Alexa+".
 - Rules for using the memory tools live in ONE place: the Agent Skill
-  `skills/portable-memory/` (SKILL.md short, details in references/). The simulator's
+  `skills/memory-steward/` (SKILL.md short, details in references/). The simulator's
   hardcoded prompt is persona only; the server's `instructions` are the minimal
   model-agnostic contract. Change behaviour rules in the skill, then re-run
   `scripts/eval_bedrock.py --conversations 1,2,3,4,5,6`.

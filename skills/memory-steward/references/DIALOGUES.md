@@ -1,4 +1,4 @@
-# Portable Memory: example dialogues
+# Memory Steward: example dialogues
 
 Ids are illustrative. Say `confirmation_prompt` exactly as returned.
 
@@ -62,6 +62,10 @@ Keep both instead:
 `list_due_reviews({})` -> MEM-0007 "The user is waiting to hear back about a job interview at a design studio."
 
 > Assistant: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+
+(No tool call here: the turn ends with the question. Wrong: calling `resolve_review` now,
+before the user has answered.)
+
 > User: I got the job, I start in November.
 
 `resolve_review({"memory_id": "MEM-0007", "still_true": false})`, then

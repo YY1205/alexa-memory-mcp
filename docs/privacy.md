@@ -1,9 +1,9 @@
-# Privacy policy: Portable Memory
+# Privacy policy: Memory Steward
 
-*Hackathon prototype, last updated October 18, 2026. Not reviewed by a lawyer.*
+*Hackathon prototype, last updated October 20, 2026. Not reviewed by a lawyer.*
 
-Portable Memory gives a voice assistant a long-term memory that **you own**: a plain
-Markdown file in your own storage. This policy explains what data the Portable Memory
+Memory Steward ("It manages your memory. You own it.") gives a voice assistant a long-term memory that **you own**: a plain
+Markdown file in your own storage. This policy explains what data the Memory Steward
 server and its web simulator handle, where it goes, and how to remove it.
 
 Contact: {{CONTACT}}
@@ -25,7 +25,7 @@ Contact: {{CONTACT}}
 
 ## What is sent to others
 
-- **Alexa+ (Amazon).** When you use Portable Memory through Alexa+, Amazon processes
+- **Alexa+ (Amazon).** When you use Memory Steward through Alexa+, Amazon processes
   your voice and requests under Amazon's own privacy notice. Alexa+ sends the memory
   tool calls (for example a question or a fact to remember) to this server and receives
   the results, which it uses to answer you.
@@ -59,7 +59,7 @@ are no analytics or tracking cookies.
 
 ## Unlinking and deleting your data
 
-- **Unlink**: in the Alexa app, disable the Portable Memory add-on (or unlink the
+- **Unlink**: in the Alexa app, disable the Memory Steward add-on (or unlink the
   account); in the simulator, click **Unlink**. The app can then no longer read or change
   your memory. Leftover token hashes on the server stop working when they expire (at most
   30 days), or immediately if the operator clears the server's token store.
@@ -70,7 +70,7 @@ are no analytics or tracking cookies.
 
 ## Children
 
-Portable Memory is not directed to children under 13 and should not be used to store
+Memory Steward is not directed to children under 13 and should not be used to store
 information about children.
 
 ## Sensitive information

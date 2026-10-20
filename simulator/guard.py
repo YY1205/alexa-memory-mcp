@@ -191,7 +191,7 @@ button{{margin-top:12px;font:inherit;padding:8px 16px;border-radius:8px;border:1
 @media (prefers-color-scheme: dark){{body{{background:#0f1115;color:#e8ebf0}} form{{background:#171a20;border-color:#2a2f38}} input{{background:#11141a;color:#e8ebf0;border-color:#2a2f38}}}}
 </style></head><body>
 <h1>Simulated Alexa+</h1>
-<p class="muted">Hackathon demo of Portable Memory. Judges: the passcode is in the testing instructions.</p>
+<p class="muted">Hackathon demo of Memory Steward. Judges: the passcode is in the testing instructions.</p>
 <form method="post" action="/gate">
   <label for="pc">Demo passcode</label>
   <input id="pc" name="passcode" type="password" autocomplete="off" autofocus>

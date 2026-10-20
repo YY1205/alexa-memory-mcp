@@ -1,7 +1,9 @@
-# Testing Portable Memory (for judges)
+# Testing Memory Steward (for judges)
+
+*It manages your memory. You own it.*
 
 Real Alexa+ add-on tooling is partner-gated, so the judged experience is **Simulated
-Alexa+**, a web app that talks to the Portable Memory server exactly like Alexa+ would: it
+Alexa+**, a web app that talks to the Memory Steward server exactly like Alexa+ would: it
 links your account with OAuth 2.1 and calls the server's MCP tools over Streamable HTTP.
 The "Alexa brain" is Amazon Nova Pro on Amazon Bedrock. All data is a fictional persona,
 "Sam".
@@ -9,7 +11,7 @@ The "Alexa brain" is Amazon Nova Pro on Amazon Bedrock. All data is a fictional 
 | What | URL |
 |---|---|
 | Simulated Alexa+ (start here) | https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws |
-| Portable Memory MCP server | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp |
+| Memory Steward MCP server | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp |
 | Privacy policy / terms | …/privacy and …/terms on the MCP server |
 
 You need two values from the **private testing instructions on Devpost**:
@@ -38,7 +40,7 @@ answer, then say the next.
 | 1 | When is my sister's birthday? | "Your sister Maya's birthday is on November 2." One `recall` call. |
 | 2 | Remember that my dentist appointment is Friday at 3. -> Yes. | It reads the fact back first. A **pending** record (dashed, amber) appears in the memory file; after "Yes." it turns **active**. Nothing is saved silently. |
 | 3 | The kitchen contractor now starts on the 27th. -> Yes. | It notices this updates the kitchen note and asks **once**. One "Yes." saves the new fact; the old one stays as **historical** (struck through, "replaced by ..."). |
-| 4 | Is there anything I should update? -> I got the job, I start in November. -> Yes. | It finds the overdue job-interview note, retires it, and offers to save the news. |
+| 4 | Is there anything I should update? -> I got the job, I start in November. -> Yes. | It finds the overdue job-interview note and **asks** whether it's still true (nothing changes until you answer). Your news retires it, then it offers to save the new fact. |
 | 5 | Remember that I hate jazz. -> No. | Nothing is saved; the pending record disappears. |
 | 7 | Share my food preferences. | An export of **only** the food fact opens in the memory panel (Copy / Download .md). Alexa just says it's ready; the model never even receives the file. |
 
@@ -49,7 +51,7 @@ thing to check.
 
 * **Under the hood**: every MCP tool call with its arguments, the result (expand
   "Result"), and its round-trip time drawn against Alexa+'s **500 ms** budget (typically a
-  few ms on the server plus network). "skill loaded" marks when the Portable Memory Agent
+  few ms on the server plus network). "skill loaded" marks when the Memory Steward Agent
   Skill was added to the model's instructions. Model time is shown separately.
 * **Your memory file**: the real `memories.md`, read through the MCP resource after every
   turn. Changed records flash; pending and historical records look different from active

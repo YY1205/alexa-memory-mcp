@@ -65,6 +65,36 @@ def call_tool(c, token, name, args):
     return r
 
 
+def tool_json(r):
+    import json
+    return json.loads(r.json()["result"]["content"][0]["text"])
+
+
+def test_tool_errors_say_plainly_that_it_did_not_work(client):
+    ep, verifier, params = start_link(client)
+    tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
+    cases = {("confirm_memory", '{"pending_id": "MEM-9999", "confirmed": true}'): "I couldn't save that.",
+             ("resolve_review", '{"memory_id": "MEM-9999", "still_true": false}'): "I couldn't update that note.",
+             ("supersede_memory", '{"old_memory_id": "MEM-9999", "new_fact": "x"}'): "I couldn't change that note.",
+             ("export_memory", '{"categories": ["nonsense"]}'): "I couldn't look that up right now."}
+    import json
+    for (name, args), spoken in cases.items():
+        out = tool_json(call_tool(client, tokens.access_token, name, json.loads(args)))
+        assert out["error"] and out["spoken_answer"] == spoken, (name, out)
+        assert "MEM-" not in out["spoken_answer"]
+
+
+def test_unexpected_tool_failure_still_answers(client, monkeypatch):
+    ep, verifier, params = start_link(client)
+    tokens = oc.exchange_code(ep, CLIENT_ID, CLIENT_SECRET, params["code"], SIM_REDIRECT, verifier, client)
+
+    def boom(*a, **k):
+        raise OSError("disk on fire")
+    monkeypatch.setattr(MemoryService, "list_due_reviews", boom)
+    out = tool_json(call_tool(client, tokens.access_token, "list_due_reviews", {}))
+    assert out == {"error": "internal error (OSError)", "spoken_answer": "I couldn't look that up right now."}
+
+
 # ---------------------------------------------------------------- metadata + 401
 
 def test_unauthenticated_mcp_gets_401_without_www_authenticate(client):
@@ -376,9 +406,9 @@ def test_export_file_travels_in_meta_not_in_model_content(client):
     result = r.json()["result"]
     content = result["content"][0]["text"]
     assert "vegetarian" not in content and '"count": 1' in content and "spoken_summary" in content
-    export = result["_meta"]["portable_memory/export"]
+    export = result["_meta"]["memory_steward/export"]
     assert export["mimeType"] == "text/markdown" and "vegetarian" in export["markdown"]
-    assert export["filename"].startswith("portable-memory-export-")
+    assert export["filename"].startswith("memory-steward-export-")
 
 
 def test_export_resource_serves_the_full_export(client):
@@ -388,7 +418,7 @@ def test_export_resource_serves_the_full_export(client):
                     json={"jsonrpc": "2.0", "id": 1, "method": "resources/read",
                           "params": {"uri": "memory://export.md"}})
     text = r.json()["result"]["contents"][0]["text"]
-    assert text.startswith("# Portable Memory export") and "Shared: everything. 10 memories." in text
+    assert text.startswith("# Memory Steward export") and "Shared: everything. 10 memories." in text
 
 
 # ---------------------------------------------------------------- deployment guards

@@ -215,7 +215,7 @@ class OAuthServer:
             "authorization_servers": [self.s.issuer],
             "scopes_supported": list(SCOPES),
             "bearer_methods_supported": ["header"],
-            "resource_name": "Portable Memory",
+            "resource_name": "Memory Steward",
         })
 
     def authorization_server_metadata(self, request: Request) -> JSONResponse:
@@ -390,7 +390,7 @@ def _page(message: str | None, status: int = 200, consent: dict | None = None, n
             for s in consent["scopes"])
         body = f"""
 <h1>Link your memory</h1>
-<p>An app wants access to your Portable Memory.</p>
+<p>An app wants access to your Memory Steward.</p>
 <form method="post" action="/authorize">
   <input type="hidden" name="nonce" value="{esc(nonce or '')}">
   <fieldset><legend>Allow it to</legend>{boxes}</fieldset>
@@ -401,7 +401,7 @@ def _page(message: str | None, status: int = 200, consent: dict | None = None, n
   <button name="action" value="deny" class="secondary">Deny</button></div>
 </form>"""
     else:
-        body = f"<h1>Portable Memory</h1><p>{esc(message or '')}</p>"
+        body = f"<h1>Memory Steward</h1><p>{esc(message or '')}</p>"
     targets = " ".join(sorted(set(form_targets or [])))
     csp = (f"default-src 'none'; style-src 'unsafe-inline'; form-action 'self' {targets}; "
            "frame-ancestors 'none'; base-uri 'none'")

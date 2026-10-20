@@ -217,7 +217,7 @@ def test_conversation_7_export_food_preferences_only(chat, sim):
     assert "vegetarian" in md and "morning" not in md and "Maya" not in md  # nothing more than asked
     assert out["reply_text"] == ("Your memory export is ready: 1 memory about food. "
                                  "It's in the memory panel, ready to download or copy.")
-    assert "# Portable Memory export" not in out["reply_text"]  # never read the file aloud
+    assert "# Memory Steward export" not in out["reply_text"]  # never read the file aloud
 
 
 def test_export_button_api(sim):
@@ -317,7 +317,7 @@ def test_read_only_link_cannot_save(module_server):
 
 def test_skill_body_loads_when_memory_tools_are_first_used(chat):
     out = chat("When is my sister's birthday?")
-    assert [s["tool"] for s in out["all_trace"]] == ["skill loaded: portable-memory", "recall"]
+    assert [s["tool"] for s in out["all_trace"]] == ["skill loaded: memory-steward", "recall"]
     out = chat("Remember that I hate jazz.")
     assert [s["tool"] for s in out["all_trace"]] == ["propose_memory"]  # loaded once per session
 
@@ -327,11 +327,11 @@ def test_system_prompt_has_skill_metadata_then_body():
     from simulator.mcp_link import ServerProfile
 
     agent = Agent(link=None, brain=ScriptedBrain())
-    profile = ServerProfile("portable-memory", "SERVER CONTRACT", [])
+    profile = ServerProfile("memory-steward", "SERVER CONTRACT", [])
     before = agent.system_prompt(profile)
-    assert "- portable-memory: Use the Portable Memory MCP server" in before
+    assert "- memory-steward: Use the Memory Steward MCP server" in before
     assert "## Updates: one yes" not in before and "SERVER CONTRACT" in before
-    after = agent.system_prompt(profile, ["portable-memory"])
+    after = agent.system_prompt(profile, ["memory-steward"])
     assert "## Updates: one yes" in after and "references/TOOLS.md" in after
     # the hardcoded prompt no longer duplicates the skill's rules
     assert "confirmation_prompt" not in before.replace("SERVER CONTRACT", "")
@@ -341,10 +341,10 @@ def test_skill_references_are_read_on_demand_and_confined():
     from simulator.agent import Agent
 
     agent = Agent(link=None, brain=ScriptedBrain())
-    ok = agent._read_reference({"skill": "portable-memory", "path": "references/TOOLS.md"})
+    ok = agent._read_reference({"skill": "memory-steward", "path": "references/TOOLS.md"})
     assert "## confirm_memory(pending_id, confirmed, replaces?)" in ok["content"]
     for bad in ("../SKILL.md", "/etc/passwd", "references/../../server.py", "SKILL.md"):
-        assert "error" in agent._read_reference({"skill": "portable-memory", "path": bad})
+        assert "error" in agent._read_reference({"skill": "memory-steward", "path": bad})
     assert "error" in agent._read_reference({"skill": "nope", "path": "references/TOOLS.md"})
 
 
@@ -352,13 +352,13 @@ def test_skill_follows_the_agentskills_spec():
     from simulator.skills import SKILLS_DIR, load_skills, parse_frontmatter
 
     skills = load_skills()
-    assert [s.name for s in skills] == ["portable-memory"]
+    assert [s.name for s in skills] == ["memory-steward"]
     skill = skills[0]
     fields, body = parse_frontmatter((skill.root / "SKILL.md").read_text())
     assert set(fields) <= {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
     assert len(fields["description"]) <= 1024 and len(fields["compatibility"]) <= 500
     assert len(body.splitlines()) < 500 and len(body) / 4 < 5000  # ~tokens
-    assert skill.mcp_server == "portable-memory" and skill.root.parent == SKILLS_DIR
+    assert skill.mcp_server == "memory-steward" and skill.root.parent == SKILLS_DIR
     for ref in ("references/TOOLS.md", "references/DIALOGUES.md"):
         assert f"]({ref})" in body and (skill.root / ref).is_file()
 

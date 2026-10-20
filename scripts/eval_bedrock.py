@@ -16,12 +16,13 @@ memory file (read over MCP) and the replies, not from exact wording:
   1 recall      reply has the birthday; nothing written
   2 save        dentist fact active and user-confirmed; nothing pending
   3 correction  MEM-0006 historical, replaced by an active "27th" fact; nothing pending
-  4 review      MEM-0007 retired; an active fact about the new job; nothing pending
+  4 review      turn 1 makes no write (the model waits for the user's answer); MEM-0007
+                retired; an active fact about the new job; nothing pending
   5 decline     no jazz fact anywhere; nothing pending
   6 hand edit   the memory file is edited by hand (dog Biscuit -> Pepper) before the
                 question; the reply uses Pepper (needs --memory-file: the server's local
                 file, and a server MEMORY_REFRESH_SECONDS of about 1)
-  every turn    no ids or "the user" read aloud, no brain/MCP errors
+  every turn    no ids or "the user" read aloud, no brain/MCP errors, no tool error results
 Get TOKEN with scripts/oauth_token.py (real OAuth flow).
 """
 from __future__ import annotations
@@ -58,6 +59,7 @@ CONVERSATIONS = {
     12: ["What have I told you?"],
 }
 OVERVIEW_QUESTIONS = {0, 10, 11, 12}
+WRITE_TOOLS = {"propose_memory", "supersede_memory", "confirm_memory", "resolve_review"}
 OTHER_ASSISTANT = "us.amazon.nova-lite-v1:0"  # "a different AI assistant" for conversation 7
 SALMON_QUESTION = ("I'm cooking dinner for this person tonight. Is grilled salmon a good idea? "
                    "Answer in one or two sentences.")
@@ -77,6 +79,9 @@ def _describe(step: dict) -> str:
         extra = f"({step['arguments'].get('query', '')!r} -> found={r.get('found')} total={r.get('total_active')})"
     elif step["tool"] == "memory_overview":
         extra = f"(total={r.get('total_active')})"
+    elif step["tool"] in ("resolve_review", "confirm_memory"):
+        a = step["arguments"]
+        extra = f"({', '.join(f'{k}={v}' for k, v in a.items())}{' -> ERROR' if 'error' in r else ''})"
     elif step["tool"] == "export_memory":
         extra = f"({json.dumps(step['arguments'])} -> count={r.get('count')})"
     return step["tool"] + extra
@@ -93,8 +98,11 @@ def other_assistant_answer(markdown: str) -> str:
 
 
 def judge(n: int, replies: list[str], records: dict, calls: list[dict] = ()) -> list[str]:
-    """Return the problems found (empty list = pass)."""
+    """Return the problems found (empty list = pass). `calls`: MCP steps with their `turn`."""
     problems = []
+    failed = [c["tool"] for c in calls if isinstance(c.get("result"), dict) and "error" in c["result"]]
+    if failed:
+        problems.append(f"tool error ({', '.join(failed)})")
     pending = [r.id for r in records.values() if r.status == "pending"]
     if pending:
         problems.append(f"left pending: {', '.join(pending)}")
@@ -125,7 +133,7 @@ def judge(n: int, replies: list[str], records: dict, calls: list[dict] = ()) -> 
             leaked = [w for w in ("morning", "Maya", "Portland", "marathon", "MEM-") if w in md]
             if leaked:
                 problems.append(f"exported more than asked ({', '.join(leaked)})")
-            if any("Portable Memory export" in r or "last confirmed" in r for r in replies):
+            if any("Memory Steward export" in r or "last confirmed" in r for r in replies):
                 problems.append("read the file aloud")
             answer = other_assistant_answer(md)
             exports[-1]["other_assistant"] = answer
@@ -151,6 +159,9 @@ def judge(n: int, replies: list[str], records: dict, calls: list[dict] = ()) -> 
                   and "27" in records[old.superseded_by].fact):
             problems.append("MEM-0006 not replaced by the 27th fact")
     elif n == 4:
+        early = [c["tool"] for c in calls if c.get("turn") == 0 and c["tool"] in WRITE_TOOLS]
+        if early:
+            problems.append(f"did not wait for the user's answer ({', '.join(early)} in turn 1)")
         if records["MEM-0007"].status == "active":
             problems.append("MEM-0007 not retired")
         if not any("job" in r.fact.lower() and r.status == "active" for r in new):
@@ -190,10 +201,10 @@ async def evaluate(url: str, token: str | None, models: list[str], repeats: int,
                     await hand_edit(memory_file, wait)
                 replies, errors, mcp_calls = [], [], []
                 lines.append(f"--- run {rep}, conversation {n}")
-                for text in turns:
+                for turn, text in enumerate(turns):
                     out = await agent.handle(f"eval-{model}-{rep}-{n}", text)
                     replies.append(out["reply_text"])
-                    mcp_calls += [s for s in out["trace"] if s.get("kind") == "mcp"]
+                    mcp_calls += [dict(s, turn=turn) for s in out["trace"] if s.get("kind") == "mcp"]
                     if out.get("error"):
                         errors.append(out["error"])
                     else:
@@ -236,7 +247,7 @@ def main() -> int:
                       args.memory_file, args.wait)
     header = [f"# {datetime.now(timezone.utc).isoformat(timespec='seconds')} | golden conversations "
               f"{args.conversations} x{args.repeats} | region {os.getenv('AWS_REGION')} | server {args.url}",
-              "# brain prompt: persona + server instructions + Agent Skill skills/portable-memory "
+              "# brain prompt: persona + server instructions + Agent Skill skills/memory-steward "
               "(loaded on first memory-tool use)"]
     text = "\n".join(header + lines) + "\n"
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

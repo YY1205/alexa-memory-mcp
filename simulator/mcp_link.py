@@ -90,7 +90,7 @@ class McpLink:
         if parsed == "" and result.structured_content is not None:
             parsed = result.structured_content
         is_error = bool(result.is_error) or (isinstance(parsed, dict) and "error" in parsed)
-        export = (result.meta or {}).get("portable_memory/export") or {}
+        export = (result.meta or {}).get("memory_steward/export") or {}
         return ToolCall(parsed, is_error, round(latency, 1), export.get("markdown"))
 
     async def export(self, categories: list[str] | None, include_history: bool,

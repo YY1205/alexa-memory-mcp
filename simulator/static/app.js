@@ -433,7 +433,7 @@ async function previewExport() {
 function downloadExport() {
   const blob = new Blob([exportMarkdown], { type: "text/markdown" });
   const a = el("a", { href: URL.createObjectURL(blob),
-    download: `portable-memory-export-${new Date().toISOString().slice(0, 10)}.md` });
+    download: `memory-steward-export-${new Date().toISOString().slice(0, 10)}.md` });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }

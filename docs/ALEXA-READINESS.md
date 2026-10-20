@@ -75,7 +75,7 @@ auth code + PKCE + resource, then MCP over Streamable HTTP.
 | Dark icons, banner 1200x600 (optional) | Not provided | |
 | Privacy policy URL | Done | `/privacy` from `docs/privacy.md`; Test `tests/test_public_pages.py` |
 | Terms of use URL | Done | `/terms` from `docs/terms.md` |
-| Agent Skill for assistants using the server | Done | `skills/portable-memory/` (agentskills.io format); loaded by the simulator |
+| Agent Skill for assistants using the server | Done | `skills/memory-steward/` (agentskills.io format); loaded by the simulator |
 
 ### addon.json: draft
 

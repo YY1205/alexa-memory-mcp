@@ -1,4 +1,6 @@
-# Portable Memory for Alexa+
+# Memory Steward for Alexa+
+
+**It manages your memory. You own it.**
 
 A self-hosted MCP server that gives Alexa+ a long-term memory **the user owns**.
 The memory is a plain Markdown file (on Google Drive or local disk) that the user
@@ -14,7 +16,7 @@ Built for the Alexa+ track of *Build, Ship, Shape: Amazon Developer Hackathon* (
 | | |
 |---|---|
 | Simulated Alexa+ (judges start here) | https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws |
-| Portable Memory MCP server | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp |
+| Memory Steward MCP server | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp |
 | Privacy policy / terms | https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/privacy, https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/terms |
 
 Step-by-step instructions for judges: [docs/TESTING.md](docs/TESTING.md) (the passcode and
@@ -91,7 +93,7 @@ is out of scope for the hackathon.
 
 ## Agent Skill
 
-[`skills/portable-memory/`](skills/portable-memory/SKILL.md) is an
+[`skills/memory-steward/`](skills/memory-steward/SKILL.md) is an
 [Agent Skill](https://agentskills.io/specification) that teaches any agent to use this server
 well: confirm before saving and read `confirmation_prompt` verbatim, one-yes updates with
 `replaces` (or keep both), `supersede_memory` only for explicit corrections, review
@@ -213,7 +215,7 @@ scripts/eval_bedrock.py  golden conversations x N on Bedrock models, pass rate +
 docs/demo-script.md    golden demo conversations
 docs/ALEXA-READINESS.md  Alexa+ requirements -> code and tests
 docs/privacy.md, terms.md  served at /privacy and /terms
-skills/portable-memory/  Agent Skill (SKILL.md + references/)
+skills/memory-steward/  Agent Skill (SKILL.md + references/)
 addon-package/         draft addon.json and listing assets
 public_pages.py        /privacy, /terms, /addon-assets/
 proof/                 latency, Inspector and Bedrock evidence

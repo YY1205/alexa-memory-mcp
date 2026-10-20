@@ -161,7 +161,7 @@ class MemoryService:
         if topic and topic.strip():
             scope += f" (topic: {topic.strip()})"
         lines = [
-            "# Portable Memory export",
+            "# Memory Steward export",
             "",
             f"> A memory export that its owner chose to share, exported on {exported_on}.",
             "> Use it as context about the owner: every fact below was confirmed by the owner.",
@@ -280,11 +280,15 @@ class MemoryService:
             target = rec.supersedes or replaces
             if replaces and rec.supersedes and replaces != rec.supersedes:
                 raise MemoryError_(f"Memory {pending_id} already replaces {rec.supersedes}, not {replaces}.")
-            old = None
+            old, note = None, None
             if target:
-                old = self._get(records, target)
-                if old.status != "active" or old.id == rec.id:
-                    raise MemoryError_(f"Memory {target} is not current, so it can't be replaced.")
+                old = next((r for r in records if r.id == target), None)
+                if old is None or old.status != "active" or old.id == rec.id:
+                    # The user said yes to the new fact: save it on its own rather than fail.
+                    note = (f"{target} was already retired, so the new fact was saved on its own."
+                            if old is not None and old.id != rec.id else
+                            f"{target} is not a current memory, so the new fact was saved on its own.")
+                    old, rec.supersedes = None, None
 
             ts = now_iso()
             rec.status, rec.source_type, rec.confidence, rec.updated_at = "active", "user_explicit", "high", ts
@@ -297,7 +301,10 @@ class MemoryService:
                 replaced = old.to_public()
             self.store.save(records)
         answer = "Got it, I've updated that." if replaced else "Got it, I'll remember that."
-        return {"saved": True, "memory": rec.to_public(), "replaced": replaced, "spoken_answer": answer}
+        result = {"saved": True, "memory": rec.to_public(), "replaced": replaced, "spoken_answer": answer}
+        if note:
+            result["note"] = note
+        return result
 
     def resolve_review(self, memory_id: str, still_true: bool, review_in_days: int | None = None) -> dict:
         """User answered "is this still true?". Keep it (with a new date) or retire it."""

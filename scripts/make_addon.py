@@ -19,18 +19,20 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "addon-package" / "addon.json"
-PLACEHOLDER = "https://portable-memory.example.com"
+PLACEHOLDER = "https://memory-steward.example.com"
 ICON_SIZES = (72, 64, 88, 126, 180, 241)  # all six required for icons.light
 
-NAME = "Portable Memory"
-SHORT = "A long-term memory you own: Alexa saves only what you confirm, keeps history, and you can edit the file."
-FULL = """Portable Memory gives Alexa a long-term memory that belongs to you. Your memories live in one plain Markdown file, memories.md, in your own Google Drive folder, so you can read and edit it yourself at any time, and any assistant you connect works with the same file.
+NAME = "Memory Steward"
+SHORT = "It manages your memory. You own it. Alexa saves only what you confirm, keeps history, and you can edit the file."
+FULL = """It manages your memory. You own it.
+
+Memory Steward gives Alexa a long-term memory that belongs to you. Your memories live in one plain Markdown file, memories.md, in your own Google Drive folder, so you can read and edit it yourself at any time, and any assistant you connect works with the same file.
 
 Nothing is saved silently. When you ask Alexa to remember something, it reads the fact back and saves it only after you say yes. If a new fact updates an old one (the contractor now starts on the 27th), Alexa asks once whether to change it; the old fact is kept as history instead of being deleted. Temporary facts such as appointments get a review date, and Alexa can ask whether they are still true.
 
 You can ask things like when your sister's birthday is, tell Alexa what to remember, correct a fact, or ask whether anything needs updating. If you change the file by hand, Alexa uses your edit within seconds.
 
-Setup: Portable Memory is self-hosted. You run the server, share one Google Drive folder with it, and link your account with your owner passphrase. The server stores only hashed sign-in tokens; see the privacy policy for details.
+Setup: Memory Steward is self-hosted. You run the server, share one Google Drive folder with it, and link your account with your owner passphrase. The server stores only hashed sign-in tokens; see the privacy policy for details.
 
 This is a hackathon prototype. Don't store passwords, financial or health information."""
 PHRASES = [
@@ -52,7 +54,7 @@ def build(base_url: str) -> dict:
                 "en-US": {
                     "default": "DEFAULT",
                     "name": {"value": NAME,
-                             "spokenForm": {"format": "ipa", "value": "ˈpɔɹtəbəl ˈmɛməɹi"}},
+                             "spokenForm": {"format": "ipa", "value": "ˈmɛməɹi ˈstuəɹd"}},
                     "shortDescription": SHORT,
                     "fullDescription": FULL,
                     "examplePhrases": PHRASES,
@@ -63,7 +65,7 @@ def build(base_url: str) -> dict:
                                             for s in ICON_SIZES],
                                   "dark": []},
                         "carouselImages": [{"uri": f"{asset}/carousel-600x900.png", "size": "600x900",
-                                            "altText": "Portable Memory: your memory is a file you own. "
+                                            "altText": "Memory Steward: it manages your memory. You own it. "
                                                        "Nothing is saved until you say yes."}],
                         "bannerImages": [],
                     },

@@ -29,7 +29,7 @@ def test_privacy_and_terms_are_served_without_auth(tmp_path, monkeypatch):
         privacy = c.get("/privacy")
         terms = c.get("/terms")
     assert privacy.status_code == 200 and terms.status_code == 200
-    assert "<h1>Privacy policy: Portable Memory</h1>" in privacy.text
+    assert "<h1>Privacy policy: Memory Steward</h1>" in privacy.text
     assert "privacy-contact@example.com" in privacy.text and "{{CONTACT}}" not in privacy.text
     assert '<a href="/privacy">privacy policy</a>' in terms.text
     assert "Hackathon prototype" in privacy.text and "Hackathon prototype" in terms.text

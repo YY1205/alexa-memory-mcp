@@ -1,4 +1,4 @@
-"""Portable Memory: a self-hosted MCP server (Streamable HTTP) that gives Alexa+
+"""Memory Steward: a self-hosted MCP server (Streamable HTTP) that gives Alexa+
 a user-owned memory kept as a human-readable Markdown file.
 
 Run locally:   python server.py            (http://127.0.0.1:8000/mcp)
@@ -28,6 +28,7 @@ from memory.store import DriveStore, LocalFileStore, MemoryFileMissing
 from retrieval.retrievers import KeywordRetriever
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+log = logging.getLogger("memory-steward")
 HERE = Path(__file__).parent
 MEMORY_URI = "memory://memories.md"
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -48,9 +49,13 @@ Voice rules:
 - Use supersede_memory only when the user corrects a specific memory you have just
   told them (you know its id); then read its confirmation_prompt and confirm.
 - When recall returns needs_review ids, or the user asks what needs updating, call
-  list_due_reviews, ask whether each fact is still true, and record the answer with
-  resolve_review. If the user gives new information instead, retire the old fact
-  (still_true=false) and propose the new one.
+  list_due_reviews, ask whether the first fact is still true, and stop: wait for the
+  user's reply. Only then record it with resolve_review. If the user gives new
+  information instead, retire the old fact (still_true=false) and propose the new one.
+- Never call a tool that changes memory (confirm_memory, resolve_review) before the
+  user has answered your question in their own words. Never assume or invent the answer.
+- If a result has `error`, the action did not happen: say its spoken_answer and never
+  claim it was saved or done.
 - For general questions about what you remember ("What do you know about me?",
   "Do you have any memory of me?"), call memory_overview. Never tell the user you have
   no memory of them unless memory_overview (or recall's total_active) says 0.
@@ -87,10 +92,13 @@ def build_service() -> MemoryService:
 
 
 def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MCPServer:
-    mcp = MCPServer(name="portable-memory", title="Portable Memory", instructions=INSTRUCTIONS,
+    mcp = MCPServer(name="memory-steward", title="Memory Steward", instructions=INSTRUCTIONS,
                     version="0.1.0")
 
-    def safe(scope: str, fn, *args, **kwargs) -> dict:
+    def safe(scope: str, fn, *args, failed: str | None = None, **kwargs) -> dict:
+        """Every error comes back as a normal result with `error` (details, for logs) and a
+        plain `spoken_answer` saying it did not work (never an id or a stack trace)."""
+        failed = failed or ("I couldn't save that." if scope == WRITE else "I couldn't look that up right now.")
         try:
             require_scope(scope)  # memory.read / memory.write from the access token
             return fn(*args, **kwargs)
@@ -99,7 +107,10 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
                        "Link your account again with permission to save.")
             return {"error": f"insufficient_scope: {scope} required", "spoken_answer": message}
         except MemoryError_ as e:
-            return {"error": str(e), "spoken_answer": str(e)}
+            return {"error": str(e), "spoken_answer": failed}
+        except Exception as e:  # noqa: BLE001 - a tool must answer, not crash the turn
+            log.exception("%s failed", getattr(fn, "__name__", "tool"))
+            return {"error": f"internal error ({type(e).__name__})", "spoken_answer": failed}
 
     @mcp.tool()
     def recall(query: str, category: str | None = None) -> dict:
@@ -139,8 +150,8 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
         # the summary, so it can't read the shared facts aloud or pass them on.
         return CallToolResult(
             content=[TextContent(type="text", text=json.dumps(result, indent=2))],
-            meta={"portable_memory/export": {"markdown": markdown, "mimeType": "text/markdown",
-                                             "filename": f"portable-memory-export-{result['exported_on']}.md"}})
+            meta={"memory_steward/export": {"markdown": markdown, "mimeType": "text/markdown",
+                                             "filename": f"memory-steward-export-{result['exported_on']}.md"}})
 
     @mcp.tool()
     def propose_memory(fact: str, category: str = "other", review_in_days: int | None = None) -> dict:
@@ -160,14 +171,16 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
         user corrects it. The old memory is kept as history, not deleted. Does NOT
         save yet: read confirmation_prompt to the user, then call confirm_memory. For
         new facts that might update an old one, use propose_memory instead."""
-        return safe(WRITE, service.propose, new_fact, supersedes=old_memory_id)
+        return safe(WRITE, service.propose, new_fact, supersedes=old_memory_id,
+                    failed="I couldn't change that note.")
 
     @mcp.tool()
     def confirm_memory(pending_id: str, confirmed: bool, replaces: str | None = None) -> dict:
-        """Finish a propose_memory or supersede_memory call with the user's answer:
-        confirmed=true saves it, false discards it. replaces: the id from
+        """Finish a propose_memory or supersede_memory call with the user's answer (call
+        only after the user has answered): confirmed=true saves it, false discards it. replaces: the id from
         propose_memory's `replaces` when the user agreed to the update; the old
-        memory is then kept as history."""
+        memory is then kept as history (if it was already retired, the new fact is
+        saved on its own and `note` says so)."""
         return safe(WRITE, service.confirm, pending_id, confirmed, replaces)
 
     @mcp.tool()
@@ -178,9 +191,11 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
 
     @mcp.tool()
     def resolve_review(memory_id: str, still_true: bool, review_in_days: int | None = None) -> dict:
-        """Record the user's answer to "is this still true?". still_true=false retires
-        the memory (kept as history). Optionally schedule the next check."""
-        return safe(WRITE, service.resolve_review, memory_id, still_true, review_in_days)
+        """Record the user's answer to "is this still true?". Call only after the user
+        has answered in their own words; never assume the answer. still_true=false
+        retires the memory (kept as history). Optionally schedule the next check."""
+        return safe(WRITE, service.resolve_review, memory_id, still_true, review_in_days,
+                    failed="I couldn't update that note.")
 
     backing = getattr(service.store, "backing", service.store)
     file_meta = {"backend": "google-drive" if isinstance(backing, DriveStore) else "local-file"}

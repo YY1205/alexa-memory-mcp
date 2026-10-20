@@ -83,13 +83,43 @@ def test_update_can_be_kept_as_a_separate_fact(service):
     assert by_id["MEM-0004"].status == "active" and by_id[p["pending_id"]].status == "active"
 
 
-def test_confirm_rejects_bad_replaces(service):
-    p = service.propose("The user hates jazz.", "preference")
-    with pytest.raises(MemoryError_):
-        service.confirm(p["pending_id"], True, replaces="MEM-9999")
+def test_confirm_with_retired_replaces_still_saves(service):
+    # The model retired the old fact via resolve_review, then passed replaces=<that id>:
+    # the user said yes, so the new fact is saved on its own instead of failing.
     service.resolve_review("MEM-0007", still_true=False)
-    with pytest.raises(MemoryError_):
-        service.confirm(p["pending_id"], True, replaces="MEM-0007")  # not current any more
+    p = service.propose("The user got the job and starts in November.", "active_context")
+    out = service.confirm(p["pending_id"], True, replaces="MEM-0007")
+    assert out["saved"] and out["replaced"] is None and "already retired" in out["note"]
+    assert out["spoken_answer"] == "Got it, I'll remember that." and "MEM-" not in out["spoken_answer"]
+    by_id = {r.id: r for r in service.store.load()}
+    new = by_id[p["pending_id"]]
+    assert new.status == "active" and new.supersedes is None
+    assert by_id["MEM-0007"].status == "historical" and by_id["MEM-0007"].superseded_by is None
+
+
+def test_confirm_with_unknown_replaces_still_saves(service):
+    p = service.propose("The user hates jazz.", "preference")
+    out = service.confirm(p["pending_id"], True, replaces="MEM-9999")
+    assert out["saved"] and "not a current memory" in out["note"]
+    assert {r.id: r for r in service.store.load()}[p["pending_id"]].status == "active"
+
+
+def test_supersede_of_a_retired_memory_still_saves(service):
+    s = service.propose("The user is no longer waiting on the interview.", supersedes="MEM-0007")
+    service.resolve_review("MEM-0007", still_true=False)
+    out = service.confirm(s["pending_id"], True)
+    assert out["saved"] and out["replaced"] is None and "note" in out
+
+
+def test_confirm_declined_is_unchanged_with_retired_replaces(service):
+    service.resolve_review("MEM-0007", still_true=False)
+    p = service.propose("The user got the job.", "active_context")
+    out = service.confirm(p["pending_id"], False, replaces="MEM-0007")
+    assert out == {"saved": False, "spoken_answer": "Okay, I won't remember that."}
+    assert p["pending_id"] not in {r.id for r in service.store.load()}
+
+
+def test_confirm_still_rejects_conflicting_replaces(service):
     s = service.propose("The user now lives in Seattle.", supersedes="MEM-0001")
     with pytest.raises(MemoryError_):
         service.confirm(s["pending_id"], True, replaces="MEM-0002")  # already targets MEM-0001
@@ -161,7 +191,7 @@ def test_export_defaults_to_active_memories_grouped_without_internals(service):
     service.confirm(s["pending_id"], True)                                # MEM-0001 -> historical
     out = service.export()
     md = out["markdown"]
-    assert md.startswith("# Portable Memory export\n")
+    assert md.startswith("# Memory Steward export\n")
     assert "chose to share" in md and "confirmed by the owner" in md and "out of date after" in md
     assert "Shared: everything. 10 memories." in md and out["count"] == 10
     assert "jazz" not in md and "Portland" not in md and "Seattle" in md   # pending / historical out

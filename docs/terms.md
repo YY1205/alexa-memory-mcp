@@ -1,12 +1,12 @@
-# Terms of use: Portable Memory
+# Terms of use: Memory Steward
 
-*Hackathon prototype, last updated October 16, 2026. Not reviewed by a lawyer.*
+*Hackathon prototype, last updated October 20, 2026. Not reviewed by a lawyer.*
 
 Contact: {{CONTACT}}
 
 ## What this is
 
-Portable Memory is an experimental prototype built for the "Build, Ship, Shape: Amazon
+Memory Steward is an experimental prototype built for the "Build, Ship, Shape: Amazon
 Developer Hackathon". It lets a voice assistant keep long-term memory in a Markdown file
 that you own. The web simulator ("Simulated Alexa+") is a demonstration, not an Amazon
 product.

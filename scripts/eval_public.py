@@ -30,13 +30,13 @@ from memory.schema import from_markdown  # noqa: E402
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("sim_url")
-    ap.add_argument("--conversations", default="0,1,2,3,4,5,7")
+    ap.add_argument("--conversations", default="0,1,2,3,4,5,7", help="repeat a number to rerun it")
     ap.add_argument("--pace", type=float, default=7.0, help="seconds between utterances (rate limit)")
     ap.add_argument("--out", default="proof/public-conversations.txt")
     args = ap.parse_args()
     sim = args.sim_url.rstrip("/")
     lines = [f"# {datetime.now(timezone.utc).isoformat(timespec='seconds')} | public simulator {sim}"]
-    results = {}
+    results = []  # (conversation, passed); a number may repeat ("4,4,4")
     with httpx.Client(timeout=60, follow_redirects=False) as browser:
         r = browser.post(f"{sim}/gate", data={"passcode": os.environ["SIM_PASSCODE"]})
         assert r.status_code == 303, f"passcode gate: {r.status_code}"
@@ -53,7 +53,7 @@ def main() -> int:
             assert browser.post(f"{sim}/api/reset", json={"session_id": session}).status_code == 200
             lines.append(f"--- conversation {n}")
             replies, errors, mcp_ms, mcp_steps = [], [], [], []
-            for text in CONVERSATIONS[n]:
+            for turn, text in enumerate(CONVERSATIONS[n]):
                 time.sleep(args.pace)
                 r = browser.post(f"{sim}/api/utterance", json={"session_id": session, "text": text})
                 out = r.json()
@@ -64,7 +64,7 @@ def main() -> int:
                 replies.append(out["reply_text"])
                 if out.get("error"):
                     errors.append(out["error"])
-                steps = [s for s in out["trace"] if s.get("kind") == "mcp"]
+                steps = [dict(s, turn=turn) for s in out["trace"] if s.get("kind") == "mcp"]
                 mcp_steps += steps
                 mcp_ms += [s["mcp_latency_ms"] for s in steps]
                 lines.append(f"  YOU: {text}\n  ALEXA: {out['reply_text']}")
@@ -78,15 +78,15 @@ def main() -> int:
                 if step.get("other_assistant"):
                     lines.append(f"  OTHER ASSISTANT ({OTHER_ASSISTANT}, given only the export): "
                                  f"{step['other_assistant'].strip()}")
-            results[n] = not problems
+            results.append((n, not problems))
             lines.append("  RESULT: " + ("PASS" if not problems else "FAIL - " + "; ".join(problems)))
         browser.post(f"{sim}/api/reset", json={})  # leave Sam's fresh memory for the judges
-    lines.insert(1, "SUMMARY " + "  ".join(f"#{n} {'PASS' if ok else 'FAIL'}" for n, ok in results.items()))
+    lines.insert(1, "SUMMARY " + "  ".join(f"#{n} {'PASS' if ok else 'FAIL'}" for n, ok in results))
     text = "\n".join(lines) + "\n"
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(text)
     print(text)
-    return 0 if all(results.values()) else 1
+    return 0 if all(ok for _, ok in results) else 1
 
 
 if __name__ == "__main__":

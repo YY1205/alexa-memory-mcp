@@ -1,7 +1,9 @@
-# Portable Memory: tool contract
+# Memory Steward: tool contract
 
-All tools return a JSON object. Errors come back as a normal result with `error` (for
-logs) and `spoken_answer` (safe to say). Scopes: reading needs `memory.read`, every
+All tools return a JSON object. Errors come back as a normal result with `error` (details,
+for logs) and `spoken_answer`, a plain sentence saying it did not work ("I couldn't save
+that.", "I couldn't update that note.", "I couldn't look that up right now."). An error
+means nothing changed: say `spoken_answer`, never claim success. Scopes: reading needs `memory.read`, every
 tool that changes memory needs `memory.write`; without it you get
 `error: "insufficient_scope: memory.write required"`.
 
@@ -35,7 +37,7 @@ keywords matched against facts and tags (e.g. `"food"`); `include_history` adds 
 
 You get a summary: `spoken_summary` ("Your memory export is ready: 1 memory about food."),
 `count`, `history_count`, `categories`, `exported_on`. The file itself is **not** given to
-you: it travels in the result's `_meta` (`portable_memory/export`: `markdown`, `mimeType`,
+you: it travels in the result's `_meta` (`memory_steward/export`: `markdown`, `mimeType`,
 `filename`) for the client to show or download. It has a preamble saying it's an
 owner-approved export with its date, then the active memories as "The owner ..." sentences
 under category headings with their last-confirmed date; no ids, no pending records.
@@ -66,8 +68,10 @@ Finish a proposal with the user's answer.
 - `replaces=<id>` (from `propose_memory`): the old memory becomes `historical`
   (kept, linked to the new one). `spoken_answer`: "Got it, I've updated that."
 
-Fails (speakably) if the pending id is unknown or already handled, or if `replaces`
-is not a current memory.
+Call it only after the user has answered. If `replaces` is no longer a current memory
+(for example it was just retired with `resolve_review`), the new fact is still saved on
+its own and the result has a `note` saying so. Fails (with `spoken_answer`) if the pending
+id is unknown or already handled.
 
 ## supersede_memory(old_memory_id, new_fact)
 
@@ -81,7 +85,8 @@ Temporary memories whose review date has passed, oldest first: `count`, `memorie
 
 ## resolve_review(memory_id, still_true, review_in_days?)
 
-The user's answer to "is this still true?". `still_true=true` keeps it (optionally with
+The user's answer to "is this still true?". Call it only after the user has answered in
+their own words; `list_due_reviews` is not an answer. `still_true=true` keeps it (optionally with
 a new review date); `false` retires it as historical.
 
 ## Resource: memory://memories.md
