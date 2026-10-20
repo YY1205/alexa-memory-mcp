@@ -1,4 +1,4 @@
-# 2026-10-20T06:34:29Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:668b347, OAuth 2.1)
+# 2026-10-20T21:52:54Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:5c7c128, OAuth 2.1)
 # token: OAuth access token from scripts/oauth_token.py (auth code + PKCE S256 + resource), redacted below
 
 $ curl -i -X POST <server>/mcp   # no token
@@ -148,7 +148,7 @@ $ npx @modelcontextprotocol/inspector --cli <server>/mcp --method tools/list --h
     },
     {
       "name": "confirm_memory",
-      "description": "Finish a propose_memory or supersede_memory call with the user's answer:\nconfirmed=true saves it, false discards it. replaces: the id from\npropose_memory's `replaces` when the user agreed to the update; the old\nmemory is then kept as history.",
+      "description": "Finish a propose_memory or supersede_memory call with the user's answer (call\nonly after the user has answered): confirmed=true saves it, false discards it. replaces: the id from\npropose_memory's `replaces` when the user agreed to the update; the old\nmemory is then kept as history (if it was already retired, the new fact is\nsaved on its own and `note` says so).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -191,7 +191,7 @@ $ npx @modelcontextprotocol/inspector --cli <server>/mcp --method tools/list --h
     },
     {
       "name": "resolve_review",
-      "description": "Record the user's answer to \"is this still true?\". still_true=false retires\nthe memory (kept as history). Optionally schedule the next check.",
+      "description": "Record the user's answer to \"is this still true?\". Call only after the user\nhas answered in their own words; never assume the answer. still_true=false\nretires the memory (kept as history). Optionally schedule the next check.",
       "inputSchema": {
         "type": "object",
         "properties": {

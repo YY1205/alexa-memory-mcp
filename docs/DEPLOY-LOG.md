@@ -71,3 +71,27 @@ waiting for the user's answer in conversation 4.
 
 The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
 (10 active records) for the judges.
+
+## Redeploy (Oct 20): `5c7c128` (conversation 4 fixes, rename to Memory Steward)
+
+| Step | Resource | Name / value | Notes |
+|---|---|---|---|
+| R.0 | (read-only) | identity `user/yue-admin` (IAM user, not root) | |
+| R.1 | ECR image | `alexa-memory-mcp:5c7c128` (arm64, built with Colima) | `docker logout` right after the push |
+| R.2 | update | `pm-server`, `pm-sim`: image only | env (13 / 11 vars), secrets (2 / 3), roles, sizing, subnets unchanged; no new AWS resources |
+| R.3 | (read-only) | rollout | both deployments COMPLETED; running tasks verified on `5c7c128` |
+
+### Verification (after the redeploy)
+
+| Check | Result | Proof |
+|---|---|---|
+| 401 without token, no `WWW-Authenticate`; both metadata docs (PRM `resource_name` "Memory Steward"); /privacy and /terms (new name, contact, exports); /addon-assets (6 icons + the re-rendered carousel, byte-identical); TLS; passcode gate; API behind the gate | 11/11 PASS | |
+| MCP Inspector tools/list with an OAuth token | PASS (8 tools; `resolve_review` says "Call only after the user has answered") | proof/inspector-tools-list-public.txt |
+| Conversations 0-5, 7 and conversation 4 three times through the public simulator, Nova Pro | 9/9 PASS. Conversation 4: turn 1 was only `list_due_reviews` in all 3 runs (the model waited for the answer). MCP 3-9 ms per call | proof/public-conversations.txt |
+
+Found during this check (not judged by the eval at the time): in one public run Nova Pro wrapped
+its replies in `<response>` tags, which the simulator displayed and spoke. Fixed on main after
+this deployment (simulator strips the tags, the judge fails any spoken tag); not deployed.
+
+The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
+(10 active records) for the judges.
