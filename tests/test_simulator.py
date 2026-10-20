@@ -370,8 +370,9 @@ def test_model_reasoning_is_never_spoken():
         {"text": "<thinking> I will ask the user if it is still true. </thinking> Is that still true?"}]}
     assert spoken_text(msg) == "Is that still true?"
     assert spoken_text({"role": "assistant", "content": [{"text": "<thinking>cut off"}]}) == ""
-    wrapped = {"role": "assistant", "content": [{"text": "<speech> Is that still true? </speech>"}]}
-    assert spoken_text(wrapped) == "Is that still true?"
+    for tag in ("speech", "response"):
+        wrapped = {"role": "assistant", "content": [{"text": f"<{tag}> Is that still true? </{tag}>"}]}
+        assert spoken_text(wrapped) == "Is that still true?"
 
 
 # ---------- MCP tool schema -> Bedrock toolSpec ----------

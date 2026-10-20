@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import statistics
 import sys
 from datetime import datetime, timezone
@@ -111,6 +112,8 @@ def judge(n: int, replies: list[str], records: dict, calls: list[dict] = ()) -> 
             problems.append("read an id aloud")
         if "the user" in reply.lower():
             problems.append('said "the user"')
+        if re.search(r"</?[a-z_]+>", reply):
+            problems.append("spoke a markup tag")
     new = [r for r in records.values() if int(r.id[4:]) > 10]
     if n in OVERVIEW_QUESTIONS:
         reply = " ".join(replies).lower()

@@ -16,8 +16,9 @@ from .skills import READ_REFERENCE_TOOL, Skill, load_skills, reference_tool_spec
 log = logging.getLogger(__name__)
 # Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it.
 _THINKING = re.compile(r"<thinking>.*?(</thinking>|$)", re.S | re.I)
-# ...and sometimes wraps the spoken part in <speech> tags: keep the words, drop the tags.
-_SPEECH_TAGS = re.compile(r"</?speech>", re.I)
+# ...and sometimes wraps the spoken part in <speech> or <response> tags: keep the words,
+# drop the tags.
+_SPEECH_TAGS = re.compile(r"</?(speech|response)>", re.I)
 
 # Only the persona lives here. How to use the memory server comes from its own
 # `instructions` (the minimal contract) and from the Agent Skill (skills/), loaded
