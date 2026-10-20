@@ -1,0 +1,61 @@
+# 2026-10-20T21:40:30+00:00 | golden conversations 4 x5 | region us-east-1 | server http://127.0.0.1:8010/mcp
+# brain prompt: persona + server instructions + Agent Skill skills/memory-steward (loaded on first memory-tool use)
+SUMMARY
+us.amazon.nova-pro-v1:0                       5/5 pass  [#4 5/5]  model latency per turn: median 1919 ms, max 3000 ms
+
+################ us.amazon.nova-pro-v1:0
+--- run 1, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: Do you still have a pending job interview at a design studio?
+     tools: skill loaded: memory-steward, list_due_reviews | model 1636 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you got the job at a design studio and start in November? And, would you like me to update any of the related memories?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 1986 ms
+  YOU: Yes.
+  ALEXA: Great, I've saved that information. If you have any other updates or new facts you'd like to share, feel free to let me know!
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1919 ms
+  RESULT: PASS
+--- run 2, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: skill loaded: memory-steward, list_due_reviews | model 2158 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got a job at a design studio and will start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 3000 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1715 ms
+  RESULT: PASS
+--- run 3, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: skill loaded: memory-steward, list_due_reviews | model 1604 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you got the job and will start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2015 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1593 ms
+  RESULT: PASS
+--- run 4, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: skill loaded: memory-steward, list_due_reviews | model 1740 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you got the job at a design studio and start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 1972 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that you got the job at a design studio and start in November.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1886 ms
+  RESULT: PASS
+--- run 5, conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: skill loaded: memory-steward, list_due_reviews | model 1580 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got a job at a design studio and start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2702 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 2532 ms
+  RESULT: PASS
