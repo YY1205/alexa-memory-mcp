@@ -8,7 +8,7 @@ resources tagged `project=alexa-memory-mcp` where the service supports tags.
 
 | Step | Resource | Name / id | Notes |
 |---|---|---|---|
-| 5.0 | (read-only) | identity `user/yue-admin` (IAM user, not root); plan **PAID** (upgraded by the owner), $119.48 credits; existing budget "My Monthly Cost Budget" ($10, kept as is); Nova Pro profile routes to us-east-1/us-east-2/us-west-2; default VPC subnets us-east-1a `subnet-04387650041eb0a78`, us-east-1b `subnet-003c6e46316ac95c4` | |
+| 5.0 | (read-only) | identity `user/yue-admin` (IAM user, not root); plan **PAID** (upgraded by the owner), $119.48 credits; existing budget "My Monthly Cost Budget" ($10, kept as is); Nova Pro profile routes to us-east-1/us-east-2/us-west-2; default VPC subnets us-east-1a `subnet-…(masked)`, us-east-1b `subnet-…(masked)` | |
 | 5.1 | ECR repository | `alexa-memory-mcp` | scan on push; lifecycle: keep last 5 images |
 | 5.2 | ECR image | `alexa-memory-mcp:e32e445` (arm64) | `docker logout` right after the push: no registry token left on disk |
 | 5.3 | SSM SecureString | `/alexa-memory-mcp/oauth-client-secret`, `/alexa-memory-mcp/owner-passphrase-hash`, `/alexa-memory-mcp/sim-passcode`, `/alexa-memory-mcp/sim-session-secret` | values generated locally, sent via a temporary 0600 file; judge passcode + demo owner passphrase only in `~/.config/alexa-memory-mcp/demo-secrets.txt` (0600) |
@@ -21,7 +21,7 @@ resources tagged `project=alexa-memory-mcp` where the service supports tags.
 | 5.5 | (created by Express Mode) | cluster `default`, shared internet-facing ALB, target groups, listener rules, ACM certificates, security groups, auto-scaling targets/policies, log groups | deleted with the services (verify at teardown) |
 | 5.6 | update | pm-server: `MCP_RESOURCE_URI`, `ALLOWED_HOSTS`, `OAUTH_REDIRECT_URIS`; pm-sim: `MCP_SERVER_URL`, `SIM_PUBLIC_URL` | canary redeploys |
 | 5.7 | CloudWatch Logs retention | `/aws/ecs/default/pm-server-5b4f`, `/aws/ecs/default/pm-sim-9f80` | 14 days |
-| 5.8 | AWS Budget | `alexa-memory-mcp` | $80/month COST; e-mail yuanyue116@gmail.com at ACTUAL > 80 % and FORECASTED > 100 %. Existing "My Monthly Cost Budget" ($10) untouched |
+| 5.8 | AWS Budget | `alexa-memory-mcp` | $80/month COST; e-mail to the owner's private alert address at ACTUAL > 80 % and FORECASTED > 100 %. Existing "My Monthly Cost Budget" ($10) untouched |
 
 ### Incident: `Role is not valid` (5.5)
 

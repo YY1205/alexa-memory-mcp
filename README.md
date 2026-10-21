@@ -120,7 +120,10 @@ Nova Pro passes all six golden conversations 3/3 (`proof/bedrock-eval.txt`).
 
 ## Run locally
 
+Python 3.10 or later.
+
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python demo_data/seed.py          # fictional demo persona "Sam"
 python server.py                  # http://127.0.0.1:8000/mcp
