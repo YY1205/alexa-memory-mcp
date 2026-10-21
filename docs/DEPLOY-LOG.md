@@ -149,4 +149,5 @@ with date, conversation and how often; only something actually broken justifies 
 | Date | Where | What | How often | Status |
 |---|---|---|---|---|
 | 2026-10-20 | public, conversation 4 (before `c1324fc`) | Nova Pro read a stored fact verbatim ("The user is ...") | 1 of 3 public runs on `b267923` | Addressed by `review_question` in `c1324fc`: 0 of 11 since (8 local, 3 public) |
+| 2026-10-21 | local demo (video recording), conversation 3 (kitchen update) | Nova Pro added "Please answer in your own words." after saying the server's `confirmation_prompt` (it echoes the skill's "in their own words" rule) | 1 take of 2 while recording; 0 of 38 eval conversations | Recorded only (code freeze); the video uses the clean take |
 | 2026-10-20 | Nova Pro in general | May still word things its own way (the rules are instructions, not guarantees); no other failures seen in the last 29 local and 9 public conversations | - | Watch |

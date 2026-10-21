@@ -5,3 +5,7 @@ __pycache__/
 service-account*.json
 .venv/
 .oauth/
+
+# demo video pipeline outputs and your own clips
+video/out/
+video/in/

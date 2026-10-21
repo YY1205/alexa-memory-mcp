@@ -191,6 +191,11 @@ See `.env.example`.
   may only call `bedrock:InvokeModel` on Nova Pro; no static AWS keys anywhere.
   Plan, costs and teardown: [docs/DEPLOY-PLAN.md](docs/DEPLOY-PLAN.md); what was created:
   [docs/DEPLOY-LOG.md](docs/DEPLOY-LOG.md).
+* **Demo video** ([video/](video/README.md), not part of the product): every product shot is a
+  real Playwright recording of the local demo (Google Drive backend, Nova Pro). The narration,
+  the "You" lines and Alexa's lines are spoken by **Amazon Polly** (`SynthesizeSpeech`,
+  generative voices); Alexa's audio is generated from the reply text actually captured in the
+  run. Scene 7's "other assistant" is Amazon Nova Lite called directly with only the export.
 
 ## Layout
 

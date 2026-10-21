@@ -1,0 +1,2 @@
+# Demo video pipeline only (video/); not needed by the server or the simulator.
+playwright==1.64.0
