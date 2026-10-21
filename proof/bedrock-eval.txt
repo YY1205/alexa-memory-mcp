@@ -1,174 +1,174 @@
-# 2026-10-20T21:39:59+00:00 | golden conversations 0,1,2,3,4,5,6,7 x3 | region us-east-1 | server http://127.0.0.1:8010/mcp
+# 2026-10-21T00:45:13+00:00 | golden conversations 0,1,2,3,4,5,6,7 x3 | region us-east-1 | server http://127.0.0.1:8010/mcp
 # brain prompt: persona + server instructions + Agent Skill skills/memory-steward (loaded on first memory-tool use)
 SUMMARY
-us.amazon.nova-pro-v1:0                      24/24 pass  [#0 3/3  #1 3/3  #2 3/3  #3 3/3  #4 3/3  #5 3/3  #6 3/3  #7 3/3]  model latency per turn: median 1780 ms, max 2484 ms
+us.amazon.nova-pro-v1:0                      24/24 pass  [#0 3/3  #1 3/3  #2 3/3  #3 3/3  #4 3/3  #5 3/3  #6 3/3  #7 3/3]  model latency per turn: median 1707 ms, max 2834 ms
 
 ################ us.amazon.nova-pro-v1:0
 --- run 1, conversation 0
   YOU: What do you know about me?
-  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating. Shall I check which one it is?
-     tools: skill loaded: memory-steward, memory_overview(total=10) | model 2484 ms
+  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day, and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating.
+     tools: skill loaded: memory-steward, memory_overview(total=10) | model 2065 ms
   RESULT: PASS
 --- run 1, conversation 1
   YOU: When is my sister's birthday?
   ALEXA: Your sister Maya's birthday is on November 2.
-     tools: skill loaded: memory-steward, recall('sister birthday' -> found=True total=10) | model 1525 ms
+     tools: skill loaded: memory-steward, recall('sister birthday' -> found=True total=10) | model 1582 ms
   RESULT: PASS
 --- run 1, conversation 2
   YOU: Remember that my dentist appointment is Friday at 3.
   ALEXA: Should I remember that your dentist appointment is on Friday at 3?
-     tools: skill loaded: memory-steward, propose_memory | model 1816 ms
+     tools: skill loaded: memory-steward, propose_memory | model 1707 ms
   YOU: Yes.
   ALEXA: Got it, I'll remember that.
-     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1915 ms
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1476 ms
   RESULT: PASS
 --- run 1, conversation 3
   YOU: The kitchen contractor now starts on the 27th.
-  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 26. Should I change it to: the kitchen contractor now starts on the 27th?
-     tools: skill loaded: memory-steward, propose_memory | model 2229 ms
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 26. Should I change it to: your kitchen contractor now starts on the 27th?
+     tools: skill loaded: memory-steward, propose_memory | model 2259 ms
   YOU: Yes.
-  ALEXA: Got it, I've updated that. The kitchen contractor now starts on the 27th.
-     tools: confirm_memory(replaces=MEM-0006, confirmed=True, pending_id=MEM-0011) | model 1724 ms
+  ALEXA: Got it, I've updated that. Your kitchen contractor now starts on the 27th.
+     tools: confirm_memory(replaces=MEM-0006, confirmed=True, pending_id=MEM-0011) | model 1926 ms
   RESULT: PASS
 --- run 1, conversation 4
   YOU: Is there anything I should update?
   ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
-     tools: skill loaded: memory-steward, list_due_reviews | model 1921 ms
+     tools: skill loaded: memory-steward, list_due_reviews | model 2015 ms
   YOU: I got the job, I start in November.
-  ALEXA: Should I remember that you got the job at a design studio and will start in November?
-     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2022 ms
+  ALEXA: Should I remember that you got the job and will start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2027 ms
   YOU: Yes.
-  ALEXA: Got it, I'll remember that.
-     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1871 ms
+  ALEXA: Got it, I'll remember that you got the job and will start in November.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1515 ms
   RESULT: PASS
 --- run 1, conversation 5
   YOU: Remember that I hate jazz.
-  ALEXA: Should I remember that you hate jazz? Please answer with a simple "yes" or "no."
-     tools: skill loaded: memory-steward, propose_memory | model 2267 ms
+  ALEXA: Should I remember that you hate jazz? Please answer with "yes" or "no".
+     tools: skill loaded: memory-steward, propose_memory | model 1605 ms
   YOU: No.
   ALEXA: Okay, I won't remember that.
-     tools: confirm_memory(confirmed=False, pending_id=MEM-0011) | model 1694 ms
+     tools: confirm_memory(confirmed=False, pending_id=MEM-0011) | model 1517 ms
   RESULT: PASS
 --- run 1, conversation 6
   YOU: When does my dog need his heartworm pill?
   ALEXA: Your dog Pepper needs his heartworm pill on the first day of each month.
-     tools: skill loaded: memory-steward, recall('dog heartworm pill' -> found=True total=10) | model 1596 ms
+     tools: skill loaded: memory-steward, recall('dog heartworm pill' -> found=True total=10) | model 1543 ms
   RESULT: PASS
 --- run 1, conversation 7
   YOU: Share my food preferences.
-  ALEXA: Your memory export about food preferences is ready. It includes 1 memory. The file has been delivered to your screen for download or copy.
-     tools: skill loaded: memory-steward, export_memory({"topic": "food", "categories": ["preference"]} -> count=1) | model 1614 ms
-  OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Given the owner's vegetarian diet and avoidance of fish, grilled salmon would not be an appropriate choice.
+  ALEXA: Your memory export about food preferences is ready. It contains 1 memory. The file has been delivered to your screen for download or copy.
+     tools: skill loaded: memory-steward, export_memory({"topic": "food", "categories": ["preference"]} -> count=1) | model 1757 ms
+  OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Grilled salmon is not a good idea since the owner is vegetarian and does not eat fish.
   RESULT: PASS
 --- run 2, conversation 0
   YOU: What do you know about me?
-  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating. Do you want to review it now?
-     tools: skill loaded: memory-steward, memory_overview(total=10) | model 1983 ms
+  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating. Would you like to review it now?
+     tools: skill loaded: memory-steward, memory_overview(total=10) | model 2005 ms
   RESULT: PASS
 --- run 2, conversation 1
   YOU: When is my sister's birthday?
   ALEXA: Your sister Maya's birthday is on November 2.
-     tools: skill loaded: memory-steward, recall('sister birthday' -> found=True total=10) | model 1848 ms
+     tools: skill loaded: memory-steward, recall('sister birthday' -> found=True total=10) | model 1318 ms
   RESULT: PASS
 --- run 2, conversation 2
   YOU: Remember that my dentist appointment is Friday at 3.
-  ALEXA: Should I remember that your dentist appointment is on Friday at 3? Please answer with "yes" or "no".
-     tools: skill loaded: memory-steward, propose_memory | model 2116 ms
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3? Please answer with a simple "yes" or "no."
+     tools: skill loaded: memory-steward, propose_memory | model 1970 ms
   YOU: Yes.
   ALEXA: Got it, I'll remember that your dentist appointment is on Friday at 3.
-     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1644 ms
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1569 ms
   RESULT: PASS
 --- run 2, conversation 3
   YOU: The kitchen contractor now starts on the 27th.
   ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 26. Should I change it to: your kitchen contractor now starts on the 27th?
-     tools: skill loaded: memory-steward, propose_memory | model 1992 ms
+     tools: skill loaded: memory-steward, propose_memory | model 1899 ms
   YOU: Yes.
-  ALEXA: Got it, I've updated that. Your kitchen contractor now starts on the 27th.
-     tools: confirm_memory(replaces=MEM-0006, confirmed=True, pending_id=MEM-0011) | model 1780 ms
+  ALEXA: Got it, I've updated that.
+     tools: confirm_memory(replaces=MEM-0006, confirmed=True, pending_id=MEM-0011) | model 1637 ms
   RESULT: PASS
 --- run 2, conversation 4
   YOU: Is there anything I should update?
-  ALEXA: There is one memory that needs to be reviewed. It's about a job interview at a design studio that you were waiting to hear back about. Is that still true?
-     tools: skill loaded: memory-steward, list_due_reviews | model 1652 ms
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: skill loaded: memory-steward, list_due_reviews | model 2307 ms
   YOU: I got the job, I start in November.
-  ALEXA: I've marked the old memory as no longer true. Should I remember that you got the job at the design studio and will start in November?
-     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2046 ms
+  ALEXA: Should I remember that you got the job at a design studio and will start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2128 ms
   YOU: Yes.
-  ALEXA: Got it, I'll remember that you got the job at the design studio and will start in November.
-     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1605 ms
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1517 ms
   RESULT: PASS
 --- run 2, conversation 5
   YOU: Remember that I hate jazz.
-  ALEXA: Should I remember that you hate jazz?
-     tools: skill loaded: memory-steward, propose_memory | model 2002 ms
+  ALEXA: Should I remember that you hate jazz? Please answer yes or no.
+     tools: skill loaded: memory-steward, propose_memory | model 1481 ms
   YOU: No.
   ALEXA: Okay, I won't remember that.
-     tools: confirm_memory(confirmed=False, pending_id=MEM-0011) | model 1457 ms
+     tools: confirm_memory(confirmed=False, pending_id=MEM-0011) | model 1458 ms
   RESULT: PASS
 --- run 2, conversation 6
   YOU: When does my dog need his heartworm pill?
   ALEXA: Your dog Pepper needs his heartworm pill on the first day of each month.
-     tools: skill loaded: memory-steward, recall('dog heartworm pill' -> found=True total=10) | model 1424 ms
+     tools: skill loaded: memory-steward, recall('dog heartworm pill' -> found=True total=10) | model 1725 ms
   RESULT: PASS
 --- run 2, conversation 7
   YOU: Share my food preferences.
-  ALEXA: Your memory export about food preferences is ready. It's been delivered to your screen for download or copying.
-     tools: skill loaded: memory-steward, export_memory({"include_history": false, "topic": "food"} -> count=1) | model 1581 ms
-  OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Given the owner's vegetarian dietary preference, grilled salmon would not be suitable.
+  ALEXA: Your memory export about food preferences is ready. It contains 1 memory. You can download or copy it from the "Your memory file" panel on the screen.
+     tools: skill loaded: memory-steward, export_memory({"include_history": false, "topic": "food"} -> count=1) | model 1706 ms
+  OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Given the owner's vegetarian diet and avoidance of fish, grilled salmon would not be a suitable dish for them.
   RESULT: PASS
 --- run 3, conversation 0
   YOU: What do you know about me?
-  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day, and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating. Would you like to review it now?
-     tools: skill loaded: memory-steward, memory_overview(total=10) | model 2130 ms
+  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating.
+     tools: skill loaded: memory-steward, memory_overview(total=10) | model 1665 ms
   RESULT: PASS
 --- run 3, conversation 1
   YOU: When is my sister's birthday?
   ALEXA: Your sister Maya's birthday is on November 2.
-     tools: skill loaded: memory-steward, recall('sister birthday' -> found=True total=10) | model 1314 ms
+     tools: skill loaded: memory-steward, recall('sister birthday' -> found=True total=10) | model 1308 ms
   RESULT: PASS
 --- run 3, conversation 2
   YOU: Remember that my dentist appointment is Friday at 3.
-  ALEXA: Should I remember that your dentist appointment is on Friday at 3? Please answer with yes or no.
-     tools: skill loaded: memory-steward, propose_memory | model 1908 ms
+  ALEXA: Should I remember that your dentist appointment is on Friday at 3?
+     tools: skill loaded: memory-steward, propose_memory | model 1363 ms
   YOU: Yes.
-  ALEXA: Got it, I'll remember that your dentist appointment is on Friday at 3.
-     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1940 ms
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1361 ms
   RESULT: PASS
 --- run 3, conversation 3
   YOU: The kitchen contractor now starts on the 27th.
-  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 26. Should I change it to: your kitchen contractor now starts on the 27th?
-     tools: skill loaded: memory-steward, propose_memory | model 1790 ms
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 26. Should I change it to: the kitchen contractor now starts on the 27th?
+     tools: skill loaded: memory-steward, propose_memory | model 1783 ms
   YOU: Yes.
   ALEXA: Got it, I've updated that.
-     tools: confirm_memory(replaces=MEM-0006, confirmed=True, pending_id=MEM-0011) | model 1407 ms
+     tools: confirm_memory(replaces=MEM-0006, confirmed=True, pending_id=MEM-0011) | model 1824 ms
   RESULT: PASS
 --- run 3, conversation 4
   YOU: Is there anything I should update?
   ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
-     tools: skill loaded: memory-steward, list_due_reviews | model 1557 ms
+     tools: skill loaded: memory-steward, list_due_reviews | model 1424 ms
   YOU: I got the job, I start in November.
-  ALEXA: Should I remember that you got a job at a design studio and will start in November?
-     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 2462 ms
+  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got the job at a design studio and start in November?
+     tools: resolve_review(memory_id=MEM-0007, still_true=False), propose_memory | model 1796 ms
   YOU: Yes.
   ALEXA: Got it, I'll remember that.
-     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 1707 ms
+     tools: confirm_memory(confirmed=True, pending_id=MEM-0011) | model 2339 ms
   RESULT: PASS
 --- run 3, conversation 5
   YOU: Remember that I hate jazz.
-  ALEXA: Should I remember that you hate jazz? Please answer with a simple yes or no.
-     tools: skill loaded: memory-steward, propose_memory | model 1414 ms
+  ALEXA: Should I remember that you hate jazz?
+     tools: skill loaded: memory-steward, propose_memory | model 2834 ms
   YOU: No.
   ALEXA: Okay, I won't remember that.
-     tools: confirm_memory(confirmed=False, pending_id=MEM-0011) | model 1305 ms
+     tools: confirm_memory(confirmed=False, pending_id=MEM-0011) | model 1927 ms
   RESULT: PASS
 --- run 3, conversation 6
   YOU: When does my dog need his heartworm pill?
   ALEXA: Your dog Pepper needs his heartworm pill on the first day of each month.
-     tools: skill loaded: memory-steward, recall('dog heartworm pill' -> found=True total=10) | model 1701 ms
+     tools: skill loaded: memory-steward, recall('dog heartworm pill' -> found=True total=10) | model 1646 ms
   RESULT: PASS
 --- run 3, conversation 7
   YOU: Share my food preferences.
-  ALEXA: Your memory export about food preferences is ready. It includes 1 memory. The file has been delivered to your screen for download or copy.
-     tools: skill loaded: memory-steward, export_memory({"topic": "food", "categories": ["preference"]} -> count=1) | model 1503 ms
+  ALEXA: Your memory export about food preferences is ready. It contains 1 memory. The file has been delivered to your screen for download or copy.
+     tools: skill loaded: memory-steward, export_memory({"topic": "food", "categories": ["preference"]} -> count=1) | model 1834 ms
   OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Grilled salmon is not a good idea, as the owner is vegetarian and does not eat fish.
   RESULT: PASS
