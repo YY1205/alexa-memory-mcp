@@ -69,6 +69,14 @@ class MemoryService:
         return (self._today() + timedelta(days=review_in_days)).isoformat()
 
     # ---------- read ----------
+    @staticmethod
+    def review_question(fact: str) -> str:
+        """Ready-to-say, second person, like confirmation_prompt."""
+        return f"I have a note that {clause(fact)}. Is that still true?"
+
+    def _with_review_question(self, r) -> dict:
+        return {**r.to_public(), "review_question": self.review_question(r.fact)}
+
     def export_markdown(self) -> str:
         """The canonical memory file, exactly as it is (or will be) written to storage."""
         return to_markdown(self.store.load())
@@ -81,7 +89,8 @@ class MemoryService:
         out = {
             "found": bool(result.records),
             "spoken_answer": result.spoken_answer,
-            "memories": [r.to_public() for r in result.records],
+            "memories": [self._with_review_question(r) if r.is_due_for_review(today) else r.to_public()
+                         for r in result.records],
             "needs_review": [r.id for r in result.records if r.is_due_for_review(today)],
             "engine": result.engine,
             # Always say how much is remembered, so "no match" is never read as "no memory".
@@ -124,7 +133,7 @@ class MemoryService:
         today = self._today()
         due = [r for r in self.store.load() if r.is_due_for_review(today)]
         due.sort(key=lambda r: r.review_after or "")
-        return {"count": len(due), "memories": [r.to_public() for r in due]}
+        return {"count": len(due), "memories": [self._with_review_question(r) for r in due]}
 
     # ---------- export (shareable snapshot) ----------
     @staticmethod

@@ -49,8 +49,8 @@ Voice rules:
 - Use supersede_memory only when the user corrects a specific memory you have just
   told them (you know its id); then read its confirmation_prompt and confirm.
 - When recall returns needs_review ids, or the user asks what needs updating, call
-  list_due_reviews, ask whether the first fact is still true, and stop: wait for the
-  user's reply. Only then record it with resolve_review. If the user gives new
+  list_due_reviews, say the first memory's review_question exactly as given, and stop:
+  wait for the user's reply. Only then record it with resolve_review. If the user gives new
   information instead, retire the old fact (still_true=false) and propose the new one.
 - Never call a tool that changes memory (confirm_memory, resolve_review) before the
   user has answered your question in their own words. Never assume or invent the answer.
@@ -186,7 +186,8 @@ def build_server(service: MemoryService, oauth: OAuthServer | None = None) -> MC
     @mcp.tool()
     def list_due_reviews() -> dict:
         """List temporary memories whose review date has passed, so you can ask the
-        user whether each one is still true."""
+        user whether each one is still true. Each has review_question: say it exactly as
+        given (it is already phrased for speech), then wait for the user's answer."""
         return safe(READ, service.list_due_reviews)
 
     @mcp.tool()

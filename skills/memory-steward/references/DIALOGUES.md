@@ -59,7 +59,8 @@ Keep both instead:
 
 > User: Is there anything I should update?
 
-`list_due_reviews({})` -> MEM-0007 "The user is waiting to hear back about a job interview at a design studio."
+`list_due_reviews({})` -> MEM-0007 "The user is waiting to hear back about a job interview at a design studio.",
+`review_question`: "I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?"
 
 > Assistant: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
 

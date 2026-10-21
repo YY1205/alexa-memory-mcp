@@ -35,6 +35,20 @@ def test_recall_finds_relevant_active_memory(service):
 def test_recall_flags_overdue_review(service):
     out = service.recall("job interview")
     assert "MEM-0007" in out["needs_review"]
+    due = next(m for m in out["memories"] if m["id"] == "MEM-0007")
+    assert due["review_question"].startswith("I have a note that you are waiting")
+    # memories that are not due carry no question
+    assert "review_question" not in service.recall("sister birthday")["memories"][0]
+
+
+def test_review_question_is_second_person_for_every_kind_of_fact(service):
+    for fact, question in [
+        ("The user's dog Biscuit needs his pill monthly.", "I have a note that your dog Biscuit needs his pill monthly."),
+        ("The user is learning Spanish and practices daily.", "I have a note that you are learning Spanish and practice daily."),
+        ("The user prefers tea.", "I have a note that you prefer tea."),
+    ]:
+        q = service.review_question(fact)
+        assert q == question + " Is that still true?" and "the user" not in q.lower()
 
 
 def test_propose_does_not_save_until_confirmed(service):
@@ -241,6 +255,9 @@ def test_supersede_keeps_history(service):
 def test_due_reviews_and_resolution(service):
     due = service.list_due_reviews()
     assert [m["id"] for m in due["memories"]] == ["MEM-0007"]
+    assert due["memories"][0]["review_question"] == (
+        "I have a note that you are waiting to hear back about a job interview at a design studio. "
+        "Is that still true?")
     service.resolve_review("MEM-0007", still_true=False)
     assert service.list_due_reviews()["count"] == 0
     assert service.recall("job interview")["found"] is False

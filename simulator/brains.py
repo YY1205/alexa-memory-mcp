@@ -14,7 +14,7 @@ import re
 from itertools import count
 from typing import Any, Protocol
 
-from memory.speech import IRREGULAR_PAST, MODALS, lower_first, to_you
+from memory.speech import IRREGULAR_PAST, MODALS, to_you
 
 
 class BrainError(Exception):
@@ -339,8 +339,7 @@ class ScriptedBrain:
                     return ("say", "Everything I remember looks up to date.")
                 first = last["memories"][0]
                 more = f" That's one of {last['count']} things to check." if last["count"] > 1 else ""
-                return ("say", f"I have a note that {lower_first(to_you(first['fact'].rstrip('.')))}. "
-                               f"Is that still true?{more}")
+                return ("say", f"{first['review_question']}{more}")  # say it as given
             if n == 0:
                 return ("tool", "recall", {"query": utterance.strip()})
             if not last.get("memories"):

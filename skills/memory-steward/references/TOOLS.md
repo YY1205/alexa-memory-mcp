@@ -14,7 +14,8 @@ Find current (active) memories relevant to a question. `category` is optional:
 
 Returns: `found` (bool), `memories` (list, most relevant first: `id`, `fact`,
 `category`, `status`, `confirmed_by_user`, `updated_at`, `review_after`),
-`needs_review` (ids among them whose review date has passed), `spoken_answer`
+`needs_review` (ids among them whose review date has passed; those memories also carry
+`review_question`, see `list_due_reviews`), `spoken_answer`
 (always null; you phrase the answer), `engine`, `total_active` (number of active memories
 overall), and `note` when nothing matched although memories exist.
 
@@ -81,7 +82,10 @@ Stage an explicit correction of a known memory. Returns `pending_id` and
 
 ## list_due_reviews()
 
-Temporary memories whose review date has passed, oldest first: `count`, `memories`.
+Temporary memories whose review date has passed, oldest first: `count`, `memories`. Each
+memory has `review_question`, ready to say in the second person ("I have a note that you
+are waiting to hear back about a job interview at a design studio. Is that still true?"):
+say it as given, then wait for the answer.
 
 ## resolve_review(memory_id, still_true, review_in_days?)
 
