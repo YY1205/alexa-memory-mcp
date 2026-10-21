@@ -370,9 +370,26 @@ def test_model_reasoning_is_never_spoken():
         {"text": "<thinking> I will ask the user if it is still true. </thinking> Is that still true?"}]}
     assert spoken_text(msg) == "Is that still true?"
     assert spoken_text({"role": "assistant", "content": [{"text": "<thinking>cut off"}]}) == ""
-    for tag in ("speech", "response"):
+    for tag in ("speech", "response", "answer"):
         wrapped = {"role": "assistant", "content": [{"text": f"<{tag}> Is that still true? </{tag}>"}]}
         assert spoken_text(wrapped) == "Is that still true?"
+
+
+@pytest.mark.parametrize("raw, spoken", [
+    ("<response><speech>Got it, I'll remember that.</speech></response>", "Got it, I'll remember that."),
+    ('<answer lang="en">Your sister\'s birthday is <b>November 2</b>.</answer>', "Your sister's birthday is November 2."),
+    ("<response> Is that still true?", "Is that still true?"),                       # never closed
+    ("Is that still true? </response>", "Is that still true?"),                      # stray closing tag
+    ("Is that still true? <respon", "Is that still true?"),                          # cut off mid-tag
+    ("<thinking>ask first</thinking><response>Is that <i>still</i> true?</response>", "Is that still true?"),
+    ("<response><thinking>plan <step/> done</thinking>Okay.</response>", "Okay."),   # nested thinking
+    ("<Thinking type='x'>never said", ""),                                           # unclosed thinking
+    ("3 < 5 and 5 > 3, a <-> b", "3 < 5 and 5 > 3, a <-> b"),                         # not tags
+])
+def test_any_markup_tag_is_dropped_but_words_are_kept(raw, spoken):
+    from simulator.agent import spoken_text
+
+    assert spoken_text({"role": "assistant", "content": [{"text": raw}]}) == spoken
 
 
 # ---------- MCP tool schema -> Bedrock toolSpec ----------

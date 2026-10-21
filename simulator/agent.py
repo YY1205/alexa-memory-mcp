@@ -14,11 +14,12 @@ from .mcp_link import McpLink, NotLinked, ServerProfile, to_bedrock_tool_config
 from .skills import READ_REFERENCE_TOOL, Skill, load_skills, reference_tool_spec
 
 log = logging.getLogger(__name__)
-# Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it.
-_THINKING = re.compile(r"<thinking>.*?(</thinking>|$)", re.S | re.I)
-# ...and sometimes wraps the spoken part in <speech> or <response> tags: keep the words,
-# drop the tags.
-_SPEECH_TAGS = re.compile(r"</?(speech|response)>", re.I)
+# Some models (e.g. Amazon Nova Pro) put their reasoning in <thinking> tags; never speak it
+# (an unclosed block runs to the end of the text).
+_THINKING = re.compile(r"<thinking\b[^>]*>.*?(</thinking\s*>|$)", re.S | re.I)
+# They also wrap the reply in tags (<speech>, <response>, ...). Drop every XML/HTML-like tag,
+# known or not, and keep the words; a tag cut off at the end of the text goes too.
+_TAG = re.compile(r"</?[A-Za-z][\w:.-]*(\s[^<>]*)?/?>|</?[A-Za-z][\w:.-]*(\s[^<>]*)?$")
 
 # Only the persona lives here. How to use the memory server comes from its own
 # `instructions` (the minimal contract) and from the Agent Skill (skills/), loaded
@@ -47,7 +48,8 @@ class Session:
 def spoken_text(message: dict) -> str:
     """The part of a model message that is meant to be said aloud."""
     text = " ".join(b["text"] for b in message["content"] if "text" in b)
-    return re.sub(r"\s+", " ", _SPEECH_TAGS.sub("", _THINKING.sub("", text))).strip()
+    text = re.sub(r"\s+", " ", _TAG.sub(" ", _THINKING.sub(" ", text)))
+    return re.sub(r" ([.,!?;:])", r"\1", text).strip()  # "<b>2</b>." -> "2."
 
 
 def _unwrap(exc: BaseException) -> BaseException:
