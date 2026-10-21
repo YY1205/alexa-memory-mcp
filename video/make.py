@@ -112,10 +112,8 @@ def build(n: int, ed: Editor) -> Timeline:
             dur = duration(C.USER_CLIP)
             s = tl.add(Piece(C.USER_CLIP, 0.0, dur, crop=False))
             vo = tl.voice("vo", sc["vo_pre"], s + 0.3)
-            want = vo + 1.5
-            if dur > want:  # your clip, sped up (max 4x) to fit the narration
-                tl.pieces[-1].speed = min(4.0, dur / want)
-            tl.pieces[-1].hold = max(0.0, want - tl.pieces[-1].length)
+            # your clip plays as edited (video/user_clip.py); hold its last frame if the narration is longer
+            tl.pieces[-1].hold = max(0.0, vo + 1.0 - dur)
         else:
             png = render.missing_card(ed.browser, "Your screen recording of the hand edit goes here "
                                       "(video/in/scene6_edit.mov is missing).", C.WORK / "scene6" / "missing.png")

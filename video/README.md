@@ -57,6 +57,18 @@ Scene 6 needs you at a terminal, so the full run skips it unless stdin is a term
 
 If you record the clip later, put it in `video/in/` and run `video/make.py --assemble`.
 
+The raw recording (`video/in/scene6_original.mov`) is cut to `scene6_edit.mov` by
+`video/user_clip.py`. That script only trims, applies one fixed crop and changes speed,
+and its times were picked from the frames:
+- **Crop:** only the TextEdit window, so the terminal (command, Drive folder id, user name,
+  paths), the desktop and notifications never appear.
+- **Kept, about 12 s:** the open file, find "bis" and select Biscuit at 2×, typing
+  "Pepper" at 1.5×, and the save, when the title loses "— Edited".
+
+```bash
+.venv/bin/python video/user_clip.py && .venv/bin/python video/make.py --assemble
+```
+
 ## Files
 
 | File | What it does |
@@ -68,4 +80,5 @@ If you record the clip later, put it in `video/in/` and run `video/make.py --ass
 | `tts.py` | Amazon Polly with a cache and loudness normalisation |
 | `render.py` | Title cards (SVG), caption overlays, montage frames |
 | `compose.py` | Turns event logs into edits; one ffmpeg call per scene, then the film and the `.srt` |
+| `user_clip.py` | Cuts your scene 6 recording (trim, crop, speed only) |
 | `make.py` | The command line |
