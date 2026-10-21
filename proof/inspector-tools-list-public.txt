@@ -1,4 +1,4 @@
-# 2026-10-20T21:52:54Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:5c7c128, OAuth 2.1)
+# 2026-10-21T00:37:10Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:b267923, OAuth 2.1)
 # token: OAuth access token from scripts/oauth_token.py (auth code + PKCE S256 + resource), redacted below
 
 $ curl -i -X POST <server>/mcp   # no token

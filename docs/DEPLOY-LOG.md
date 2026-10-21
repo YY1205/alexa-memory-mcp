@@ -95,3 +95,28 @@ this deployment (simulator strips the tags, the judge fails any spoken tag); not
 
 The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
 (10 active records) for the judges.
+
+## Redeploy (Oct 20, second): `b267923` (generic reply cleanup)
+
+| Step | Resource | Name / value | Notes |
+|---|---|---|---|
+| R.0 | (read-only) | identity `user/yue-admin` (IAM user, not root) | |
+| R.1 | ECR image | `alexa-memory-mcp:b267923` (arm64, built with Colima) | `docker logout` right after the push |
+| R.2 | update | `pm-server`, `pm-sim`: image only | env (13 / 11 vars), secrets (2 / 3), roles, sizing, subnets unchanged; no new AWS resources |
+| R.3 | (read-only) | rollout | both deployments COMPLETED; running tasks verified on `b267923` |
+
+### Verification (after the redeploy)
+
+| Check | Result | Proof |
+|---|---|---|
+| 401 without token, no `WWW-Authenticate`; both metadata docs; /privacy, /terms; /addon-assets (byte-identical carousel); TLS; passcode gate; API behind the gate | 11/11 PASS | |
+| MCP Inspector tools/list with an OAuth token | PASS (8 tools) | proof/inspector-tools-list-public.txt |
+| Conversations 0-5, 7 and conversation 4 three times, public simulator, Nova Pro | 8/9 PASS. No markup tags in any of the 18 replies. Conversation 4: turn 1 was only `list_due_reviews` in all 3 runs (waited for the answer); one run FAILED the speaking rule: it quoted the stored fact verbatim ("I have a note that says \"The user is waiting ...\""), i.e. third person. MCP 4-12 ms per call | proof/public-conversations.txt |
+
+Known issue (not fixed): Nova Pro occasionally reads a stored fact verbatim ("The user ...")
+when asking a review question (1 of 3 public runs here; 0 of 29 local runs today). A
+model-agnostic fix would be a ready-to-say `review_question` in `list_due_reviews`, like
+`confirmation_prompt`; not done (it needs another redeploy).
+
+The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
+(10 active records) for the judges.
