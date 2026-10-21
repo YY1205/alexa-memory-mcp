@@ -113,10 +113,40 @@ The public simulator was left linked (memory.read + memory.write) and reset to S
 | MCP Inspector tools/list with an OAuth token | PASS (8 tools) | proof/inspector-tools-list-public.txt |
 | Conversations 0-5, 7 and conversation 4 three times, public simulator, Nova Pro | 8/9 PASS. No markup tags in any of the 18 replies. Conversation 4: turn 1 was only `list_due_reviews` in all 3 runs (waited for the answer); one run FAILED the speaking rule: it quoted the stored fact verbatim ("I have a note that says \"The user is waiting ...\""), i.e. third person. MCP 4-12 ms per call | proof/public-conversations.txt |
 
-Known issue (not fixed): Nova Pro occasionally reads a stored fact verbatim ("The user ...")
-when asking a review question (1 of 3 public runs here; 0 of 29 local runs today). A
-model-agnostic fix would be a ready-to-say `review_question` in `list_due_reviews`, like
-`confirmation_prompt`; not done (it needs another redeploy).
+Issue found: Nova Pro occasionally read a stored fact verbatim ("The user ...") when asking a
+review question (1 of 3 public runs here; 0 of 29 local runs). Fixed in the next redeploy
+(`c1324fc`, `review_question`).
 
 The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
 (10 active records) for the judges.
+
+## Redeploy (Oct 20, third and last before the code freeze): `c1324fc` (review_question)
+
+| Step | Resource | Name / value | Notes |
+|---|---|---|---|
+| R.0 | (read-only) | identity `user/yue-admin` (IAM user, not root) | |
+| R.1 | ECR image | `alexa-memory-mcp:c1324fc` (arm64, built with Colima) | `docker logout` right after the push; the repo now holds 5 images (lifecycle keeps the last 5) |
+| R.2 | update | `pm-server`, `pm-sim`: image only | env (13 / 11 vars), secrets (2 / 3), roles, sizing, subnets unchanged; no new AWS resources |
+| R.3 | (read-only) | rollout | both deployments COMPLETED; running tasks verified on `c1324fc` |
+
+### Verification (after the redeploy)
+
+| Check | Result | Proof |
+|---|---|---|
+| 401 without token, no `WWW-Authenticate`; both metadata docs; /privacy, /terms; /addon-assets; TLS; passcode gate; API behind the gate | 11/11 PASS | |
+| MCP Inspector tools/list with an OAuth token | PASS (8 tools; `list_due_reviews` documents `review_question`) | proof/inspector-tools-list-public.txt |
+| Local, Nova Pro: conversations 0-7 x3, conversation 4 x5 more | 24/24 + 5/5 PASS; in all 8 conversation-4 runs turn 1 was only `list_due_reviews` and the question was the server's `review_question` word for word | proof/bedrock-eval.txt, proof/bedrock-eval-conv4.txt |
+| Public: conversations 0-5, 7 and conversation 4 three times, Nova Pro | 9/9 PASS; no markup tags; conversation 4 asked the second-person `review_question` and waited in 3/3. MCP 5-12 ms per call | proof/public-conversations.txt |
+
+The public simulator was left linked (memory.read + memory.write) and reset to Sam's seed
+(10 active records) for the judges.
+
+## Known issues (code freeze: recorded here, not fixed)
+
+Since `v1.4-submission` the code is frozen (CLAUDE.md). Model quirks seen after that go here,
+with date, conversation and how often; only something actually broken justifies a redeploy.
+
+| Date | Where | What | How often | Status |
+|---|---|---|---|---|
+| 2026-10-20 | public, conversation 4 (before `c1324fc`) | Nova Pro read a stored fact verbatim ("The user is ...") | 1 of 3 public runs on `b267923` | Addressed by `review_question` in `c1324fc`: 0 of 11 since (8 local, 3 public) |
+| 2026-10-20 | Nova Pro in general | May still word things its own way (the rules are instructions, not guarantees); no other failures seen in the last 29 local and 9 public conversations | - | Watch |

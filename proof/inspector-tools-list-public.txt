@@ -1,4 +1,4 @@
-# 2026-10-21T00:37:10Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:b267923, OAuth 2.1)
+# 2026-10-21T00:56:47Z | MCP Inspector 2.11.0 | public server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws (AWS ECS Express Mode, image alexa-memory-mcp:c1324fc, OAuth 2.1)
 # token: OAuth access token from scripts/oauth_token.py (auth code + PKCE S256 + resource), redacted below
 
 $ curl -i -X POST <server>/mcp   # no token
@@ -182,7 +182,7 @@ $ npx @modelcontextprotocol/inspector --cli <server>/mcp --method tools/list --h
     },
     {
       "name": "list_due_reviews",
-      "description": "List temporary memories whose review date has passed, so you can ask the\nuser whether each one is still true.",
+      "description": "List temporary memories whose review date has passed, so you can ask the\nuser whether each one is still true. Each has review_question: say it exactly as\ngiven (it is already phrased for speech), then wait for the user's answer.",
       "inputSchema": {
         "type": "object",
         "properties": {},

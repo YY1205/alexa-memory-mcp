@@ -102,15 +102,22 @@ Oct 23, 2026, 12:00 PM PT). See README.md for tools, config and layout.
 
 ## Release state
 
+> **CODE FREEZE (since Oct 20, 2026, `v1.4-submission`).** No more code changes or
+> redeploys before submission unless something is actually **broken** (a crash, a failing
+> smoke check, the demo unreachable). A model quirk (odd wording, an occasional wrong tool
+> order) is not "broken": record it under "Known issues" at the end of docs/DEPLOY-LOG.md
+> instead. Docs, proofs, the video and the Devpost text can still change.
+
 - **`v1.0-alexa-demo`** (annotated tag on `05885b9`) is the known-good fallback for the
   submission: if later work breaks anything, submit / redeploy from this tag.
-- **`v1.1-submission`** (annotated tag on `668b347`): memory_overview + export.
-- **`v1.2-submission`** (annotated tag on `5c7c128`): conversation 4 fixes (wait for the
-  user's answer, plain error answers, retired `replaces` still saves); rename to Memory Steward.
-- **`v1.3-submission`** (annotated tag on `b267923`): the commit deployed for judging; adds
-  generic reply cleanup (any markup tag dropped from spoken/displayed replies).
-- **Deployed right now** (public demo, ECS Express Mode): image `alexa-memory-mcp:b267923` on
-  both pm-server and pm-sim (redeployed Oct 20, docs/DEPLOY-LOG.md). Redeploying means
+- **`v1.1-submission`** (`668b347`): memory_overview + export.
+- **`v1.2-submission`** (`5c7c128`): conversation 4 fixes (wait for the user's answer, plain
+  error answers, retired `replaces` still saves); rename to Memory Steward.
+- **`v1.3-submission`** (`b267923`): generic reply cleanup (any markup tag dropped).
+- **`v1.4-submission`** (`c1324fc`): **the commit deployed for judging**; reviews come with a
+  ready-to-say second-person `review_question`.
+- **Deployed right now** (public demo, ECS Express Mode): image `alexa-memory-mcp:c1324fc` on
+  both pm-server and pm-sim (docs/DEPLOY-LOG.md). Redeploying (only if broken) means
   building the commit as a new image (tag it with the commit id), pushing to ECR, then
   `update-express-gateway-service` on both services.
 - Cross-platform / multi-client work is cancelled; the cross-platform path is the memory

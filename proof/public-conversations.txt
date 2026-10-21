@@ -1,77 +1,77 @@
-# 2026-10-21T00:37:18+00:00 | public simulator https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws
-SUMMARY #0 PASS  #1 PASS  #2 PASS  #3 PASS  #4 FAIL  #4 PASS  #4 PASS  #5 PASS  #7 PASS
+# 2026-10-21T00:56:55+00:00 | public simulator https://pm-eed93c7c206e48b49a65ec4b4273adb3.ecs.us-east-1.on.aws
+SUMMARY #0 PASS  #1 PASS  #2 PASS  #3 PASS  #4 PASS  #4 PASS  #4 PASS  #5 PASS  #7 PASS
 # brain bedrock us.amazon.nova-pro-v1:0 | server https://pm-2cbfc2377dac4f9b8a15cc6219028368.ecs.us-east-1.on.aws/mcp
 # linked the account through the server's sign-in page
 --- conversation 0
   YOU: What do you know about me?
-  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day, and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating.
-     tools: memory_overview | MCP 7 ms | model 1865 ms
+  ALEXA: I remember 10 things about you, including that you are learning Spanish and practice 15 minutes a day, and that your dog Biscuit needs his heartworm pill on the first day of each month. One of them may need updating. Would you like to review it now?
+     tools: memory_overview | MCP 8 ms | model 1816 ms
   RESULT: PASS
 --- conversation 1
   YOU: When is my sister's birthday?
   ALEXA: Your sister Maya's birthday is on November 2.
-     tools: recall | MCP 5 ms | model 1414 ms
+     tools: recall | MCP 5 ms | model 1263 ms
   RESULT: PASS
 --- conversation 2
   YOU: Remember that my dentist appointment is Friday at 3.
   ALEXA: Should I remember that your dentist appointment is on Friday at 3?
-     tools: propose_memory | MCP 6 ms | model 1531 ms
+     tools: propose_memory | MCP 6 ms | model 1415 ms
   YOU: Yes.
   ALEXA: Got it, I'll remember that.
-     tools: confirm_memory | MCP 10 ms | model 1155 ms
+     tools: confirm_memory | MCP 11 ms | model 1642 ms
   RESULT: PASS
 --- conversation 3
   YOU: The kitchen contractor now starts on the 27th.
-  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 27. Should I change it to: the kitchen contractor now starts on the 27th?
-     tools: propose_memory | MCP 6 ms | model 2131 ms
+  ALEXA: This looks like an update to your note that you are renovating the kitchen and the contractor starts on October 27. Should I change it to: your kitchen contractor now starts on the 27th?
+     tools: propose_memory | MCP 6 ms | model 1555 ms
   YOU: Yes.
   ALEXA: Got it, I've updated that.
-     tools: confirm_memory | MCP 11 ms | model 1434 ms
-  RESULT: PASS
---- conversation 4
-  YOU: Is there anything I should update?
-  ALEXA: I have a note that says "The user is waiting to hear back about a job interview at a design studio." Is that still true?
-     tools: list_due_reviews | MCP 5 ms | model 1578 ms
-  YOU: I got the job, I start in November.
-  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got a job at a design studio and will start in November?
-     tools: resolve_review, propose_memory | MCP 10, 5 ms | model 2675 ms
-  YOU: Yes.
-  ALEXA: Got it, I'll remember that.
-     tools: confirm_memory | MCP 12 ms | model 1683 ms
-  RESULT: FAIL - said "the user"
---- conversation 4
-  YOU: Is there anything I should update?
-  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
-     tools: list_due_reviews | MCP 5 ms | model 1834 ms
-  YOU: I got the job, I start in November.
-  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got the job at a design studio and will be starting in November?
-     tools: resolve_review, propose_memory | MCP 10, 6 ms | model 2215 ms
-  YOU: Yes.
-  ALEXA: Got it, I'll remember that.
-     tools: confirm_memory | MCP 11 ms | model 1433 ms
+     tools: confirm_memory | MCP 11 ms | model 2032 ms
   RESULT: PASS
 --- conversation 4
   YOU: Is there anything I should update?
   ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
-     tools: list_due_reviews | MCP 4 ms | model 1536 ms
+     tools: list_due_reviews | MCP 5 ms | model 1360 ms
   YOU: I got the job, I start in November.
-  ALEXA: Should I remember that you got the job at a design studio and will start in November?
-     tools: resolve_review, propose_memory | MCP 10, 5 ms | model 1982 ms
+  ALEXA: Should I remember that you got the job at a design studio and start in November?
+     tools: resolve_review, propose_memory | MCP 11, 6 ms | model 1710 ms
   YOU: Yes.
   ALEXA: Got it, I'll remember that.
-     tools: confirm_memory | MCP 11 ms | model 1702 ms
+     tools: confirm_memory | MCP 11 ms | model 1245 ms
+  RESULT: PASS
+--- conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: list_due_reviews | MCP 6 ms | model 1947 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Should I remember that you got a job at a design studio and start in November?
+     tools: resolve_review, propose_memory | MCP 11, 6 ms | model 2059 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | MCP 12 ms | model 1971 ms
+  RESULT: PASS
+--- conversation 4
+  YOU: Is there anything I should update?
+  ALEXA: I have a note that you are waiting to hear back about a job interview at a design studio. Is that still true?
+     tools: list_due_reviews | MCP 5 ms | model 1576 ms
+  YOU: I got the job, I start in November.
+  ALEXA: Okay, I've marked that as no longer true. Should I remember that you got the job and will start in November?
+     tools: resolve_review, propose_memory | MCP 12, 6 ms | model 1729 ms
+  YOU: Yes.
+  ALEXA: Got it, I'll remember that.
+     tools: confirm_memory | MCP 11 ms | model 1346 ms
   RESULT: PASS
 --- conversation 5
   YOU: Remember that I hate jazz.
-  ALEXA: Should I remember that you hate jazz?
-     tools: propose_memory | MCP 6 ms | model 1361 ms
+  ALEXA: Should I remember that you hate jazz? Please answer with "yes" or "no."
+     tools: propose_memory | MCP 7 ms | model 1950 ms
   YOU: No.
   ALEXA: Okay, I won't remember that.
-     tools: confirm_memory | MCP 11 ms | model 1610 ms
+     tools: confirm_memory | MCP 10 ms | model 1204 ms
   RESULT: PASS
 --- conversation 7
   YOU: Share my food preferences.
-  ALEXA: Your memory export about food preferences is ready. It includes 1 memory. The file has been delivered to your screen for download or copy.
-     tools: export_memory | MCP 7 ms | model 1444 ms
-  OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Given the owner's vegetarian diet and avoidance of fish, grilled salmon is not a suitable dish for them.
+  ALEXA: Your memory export about food preferences is ready. It contains 1 memory. The file has been delivered to your screen for download or copy.
+     tools: export_memory | MCP 6 ms | model 2366 ms
+  OTHER ASSISTANT (us.amazon.nova-lite-v1:0, given only the export): Grilled salmon is not a good idea since the owner is vegetarian and does not eat fish.
   RESULT: PASS
